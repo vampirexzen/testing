@@ -24,8 +24,8 @@
         
         <!-- HEADER -->
         <div class="text-center mb-4">
-            <h1 class="arcade-font text-2xl sm:text-4xl text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.9)]">TEKKEN 3D PVP SHOWDOWN</h1>
-            <p class="arcade-font text-[10px] sm:text-xs text-cyan-400 mt-2">1V1 ONLINE REAL-TIME MULTIPLAYER</p>
+            <h1 class="arcade-font text-xl sm:text-3xl text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.9)]">TEKKEN 3D PVP SHOWDOWN</h1>
+            <p class="arcade-font text-[9px] sm:text-xs text-cyan-400 mt-2">1V1 ONLINE REAL-TIME MULTIPLAYER</p>
         </div>
 
         <!-- 1. AUTH / REGISTER SCREEN -->
@@ -73,20 +73,19 @@
                 <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col justify-center text-center space-y-3">
                     <h3 class="arcade-font text-xs text-cyan-400">3D TEKKEN PVP CONTROLS</h3>
                     <div class="arcade-font text-[10px] text-slate-300 space-y-2 text-left bg-slate-900 p-3 rounded border border-slate-800">
-                        <p>• <span class="text-yellow-400">A</span> : STEP LEFT</p>
-                        <p>• <span class="text-yellow-400">S</span> : STEP RIGHT</p>
-                        <p>• <span class="text-red-400">Z</span> : PUNCH (LIGHT ATTACK)</p>
-                        <p>• <span class="text-purple-400">X</span> : KICK (HEAVY ATTACK)</p>
-                        <p>• <span class="text-cyan-400">SPACE</span> : SUMMONING ULTIMATE</p>
+                        <p>• <span class="text-yellow-400">ARROW KEYS / ON-SCREEN PAD</span> : MOVE (LEFT, RIGHT, UP, DOWN)</p>
+                        <p>• <span class="text-red-400">Z / PUNCH</span> : LIGHT ATTACK</p>
+                        <p>• <span class="text-purple-400">X / KICK</span> : HEAVY ATTACK</p>
+                        <p>• <span class="text-cyan-400">SPACE / SUMMON</span> : ULTIMATE SUMMON</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. CHARACTER SELECTION SCREEN -->
-        <div id="screen-char-select" class="hidden space-y-6 text-center">
+        <!-- 3. CHARACTER SELECTION & WAITING SCREEN -->
+        <div id="screen-char-select" class="hidden space-y-6 text-center py-6">
             <h2 class="arcade-font text-lg text-yellow-400">SELECT YOUR FIGHTER</h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div id="char-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 <div onclick="pickChar('Modi ji')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🇮🇳</div>
                     <div class="arcade-font text-xs text-yellow-300">Modi ji</div>
@@ -112,6 +111,9 @@
                     <div class="arcade-font text-xs text-yellow-300">Diddy</div>
                     <div class="text-[9px] text-slate-400 mt-2">Summon: 1000 baby oil</div>
                 </div>
+            </div>
+            <div id="waiting-banner" class="hidden arcade-font text-xs text-amber-300 animate-pulse mt-6">
+                Waiting for opponent to select their character...
             </div>
         </div>
 
@@ -145,17 +147,28 @@
                 <div id="canvas3d-container" class="w-full h-full"></div>
                 <div id="battle-announcer" class="absolute inset-0 flex flex-col items-center justify-center arcade-font text-xl text-yellow-300 bg-black/80 hidden">
                     <span id="announcer-msg">MATCH START</span>
-                    <button onclick="location.reload()" class="mt-4 bg-yellow-500 text-slate-950 px-4 py-2 text-xs rounded hover:bg-yellow-400 cursor-pointer">RETURN TO LOBBY</button>
+                    <div class="flex gap-3 mt-4">
+                        <button onclick="rematch()" class="bg-green-600 text-white px-4 py-2 text-xs rounded hover:bg-green-500 cursor-pointer">REMATCH</button>
+                        <button onclick="returnToLobby()" class="bg-yellow-500 text-slate-950 px-4 py-2 text-xs rounded hover:bg-yellow-400 cursor-pointer">LOBBY</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- ON-SCREEN BUTTON CONTROLS -->
-            <div class="grid grid-cols-5 gap-2">
-                <button onclick="triggerMove(-1)" class="arcade-font bg-slate-700 hover:bg-slate-600 py-3 rounded text-[10px] font-bold cursor-pointer">LEFT (A)</button>
-                <button onclick="triggerMove(1)" class="arcade-font bg-slate-700 hover:bg-slate-600 py-3 rounded text-[10px] font-bold cursor-pointer">RIGHT (S)</button>
-                <button onclick="triggerAttack('punch')" class="arcade-font bg-blue-600 hover:bg-blue-500 py-3 rounded text-[10px] font-bold cursor-pointer">PUNCH (Z)</button>
-                <button onclick="triggerAttack('kick')" class="arcade-font bg-purple-600 hover:bg-purple-500 py-3 rounded text-[10px] font-bold cursor-pointer">KICK (X)</button>
-                <button onclick="triggerSummon()" id="btn-summon" class="arcade-font bg-amber-600 hover:bg-amber-500 py-3 rounded text-[10px] font-bold animate-pulse cursor-pointer">SUMMON (SPACE)</button>
+            <!-- ON-SCREEN MOBILE CONTROLS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
+                <!-- Directional D-Pad for Mobile -->
+                <div class="grid grid-cols-3 gap-1 bg-slate-800 p-2 rounded border border-slate-700 text-center col-span-1">
+                    <div></div>
+                    <button ontouchstart="moveDirection('up')" onmousedown="moveDirection('up')" class="bg-slate-700 hover:bg-slate-600 py-2 rounded text-xs font-bold text-yellow-400">▲</button>
+                    <div></div>
+                    <button ontouchstart="moveDirection('left')" onmousedown="moveDirection('left')" class="bg-slate-700 hover:bg-slate-600 py-2 rounded text-xs font-bold text-yellow-400">◀</button>
+                    <button ontouchstart="moveDirection('down')" onmousedown="moveDirection('down')" class="bg-slate-700 hover:bg-slate-600 py-2 rounded text-xs font-bold text-yellow-400">▼</button>
+                    <button ontouchstart="moveDirection('right')" onmousedown="moveDirection('right')" class="bg-slate-700 hover:bg-slate-600 py-2 rounded text-xs font-bold text-yellow-400">▶</button>
+                </div>
+                <!-- Action Buttons -->
+                <button onclick="triggerAttack('punch')" class="arcade-font bg-blue-600 hover:bg-blue-500 py-3 rounded text-[10px] font-bold cursor-pointer flex items-center justify-center">PUNCH (Z)</button>
+                <button onclick="triggerAttack('kick')" class="arcade-font bg-purple-600 hover:bg-purple-500 py-3 rounded text-[10px] font-bold cursor-pointer flex items-center justify-center">KICK (X)</button>
+                <button onclick="triggerSummon()" id="btn-summon" class="arcade-font bg-amber-600 hover:bg-amber-500 py-3 rounded text-[10px] font-bold animate-pulse cursor-pointer flex items-center justify-center">SUMMON (SPACE)</button>
             </div>
         </div>
 
@@ -163,16 +176,15 @@
 
     <!-- JAVASCRIPT GAME ENGINE & SUPABASE -->
     <script>
-        // SUPABASE CLIENT INITIALIZATION
         const SUPABASE_URL = 'https://duzdubrqkkpgqljbnrlp.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1emR1YnJxa2twZ3FsamJucmxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzQ2NzIsImV4cCI6MjEwOTAxMDY3Mn0.K_KNICMsQxFHPZ6snlNMqjPXc8mvoVhroeXlg-PLBHQ';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // GLOBAL APP STATE
         let currentUser = null;
         let currentUserId = null;
         let activeChallenge = null;
         let selectedChar = null;
+        let opponentChar = null;
         let matchChannel = null;
         let isHost = false;
 
@@ -192,7 +204,6 @@
             'Diddy': 0x22c55e
         };
 
-        // --- AUTH & LOBBY SYSTEM ---
         async function registerUser() {
             const username = document.getElementById('username-input').value.trim();
             const errorEl = document.getElementById('auth-error');
@@ -231,7 +242,6 @@
             location.reload();
         }
 
-        // REALTIME LOBBY SEARCH & INVITES
         function initRealtimeLobby() {
             supabaseClient.channel('public:profiles')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => searchFighters())
@@ -259,11 +269,11 @@
             let req = supabaseClient.from('profiles').select('*').neq('id', currentUserId).eq('status', 'online');
             if (query) req = req.ilike('username', `%${query}%`);
 
-            const { data, error } = await req;
+            const { data } = await req;
             const listEl = document.getElementById('fighters-list');
             listEl.innerHTML = '';
 
-            if (error || !data || data.length === 0) {
+            if (!data || data.length === 0) {
                 listEl.innerHTML = '<p class="arcade-font text-[10px] text-slate-500 text-center py-4">No online players found.</p>';
                 return;
             }
@@ -316,22 +326,32 @@
             activeChallenge = null;
         }
 
-        // --- CHARACTER SELECTION & MATCH INITIALIZATION ---
+        // --- CHARACTER SELECTION & SYNCHRONIZED SPAWN ---
         function pickChar(charName) {
             selectedChar = charName;
-            document.getElementById('screen-char-select').classList.add('hidden');
-            document.getElementById('screen-battle').classList.remove('hidden');
+            document.getElementById('char-grid').classList.add('hidden');
+            document.getElementById('waiting-banner').classList.remove('hidden');
 
-            document.getElementById('hud-p1-name').textContent = `${currentUser} (${selectedChar})`;
-            document.getElementById('hud-p2-name').textContent = activeChallenge ? (isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username) : 'OPPONENT';
-            document.getElementById('btn-summon').textContent = `SUMMON: ${summonNames[selectedChar].toUpperCase()}`;
-
-            init3DArena();
             connectP2PRealtime();
+            broadcastPVPState('char_selected', { char: selectedChar });
+        }
+
+        function checkBothPlayersReady() {
+            if (selectedChar && opponentChar) {
+                document.getElementById('screen-char-select').classList.add('hidden');
+                document.getElementById('screen-battle').classList.remove('hidden');
+
+                document.getElementById('hud-p1-name').textContent = `${currentUser} (${selectedChar})`;
+                document.getElementById('hud-p2-name').textContent = isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username;
+                document.getElementById('btn-summon').textContent = `SUMMON: ${summonNames[selectedChar].toUpperCase()}`;
+
+                init3DArena();
+            }
         }
 
         // --- REALTIME PVP SYNCHRONIZATION ---
         function connectP2PRealtime() {
+            if (matchChannel) return;
             const matchId = activeChallenge ? activeChallenge.id : 'room_pvp_1';
             matchChannel = supabaseClient.channel('match_' + matchId);
 
@@ -339,21 +359,28 @@
                 .on('broadcast', { event: 'pvp_action' }, payload => {
                     const data = payload.payload;
                     if (data.sender !== currentUser) {
-                        p2Data.x = data.x;
-                        p2Data.hp = data.hp;
-                        if (data.action === 'punch' || data.action === 'kick') {
-                            animateAttack(p2Mesh, data.action);
+                        if (data.action === 'char_selected') {
+                            opponentChar = data.char;
+                            checkBothPlayersReady();
+                        } else {
+                            p2Data.x = data.x;
+                            p2Data.z = data.z;
+                            p2Data.hp = data.hp;
+                            if (data.action === 'punch' || data.action === 'kick') {
+                                animateAttack(p2Mesh, data.action);
+                            }
+                            if (data.action === 'summon') {
+                                triggerSummonMesh(p2Mesh);
+                            }
+                            updateHUD();
+                            checkMatchOver();
                         }
-                        if (data.action === 'summon') {
-                            triggerSummonMesh(p2Mesh, data.char);
-                        }
-                        updateHUD();
                     }
                 })
                 .subscribe();
         }
 
-        function broadcastPVPState(action = '') {
+        function broadcastPVPState(action = '', extra = {}) {
             if (!matchChannel) return;
             matchChannel.send({
                 type: 'broadcast',
@@ -361,9 +388,11 @@
                 payload: {
                     sender: currentUser,
                     x: p1Data.x,
+                    z: p1Data.z,
                     hp: p1Data.hp,
                     char: selectedChar,
-                    action: action
+                    action: action,
+                    ...extra
                 }
             });
         }
@@ -371,16 +400,17 @@
         // --- THREE.JS 3D TEKKEN ENGINE ---
         let scene, camera, renderer;
         let p1Mesh, p2Mesh;
-        let p1Data = { x: -3, hp: 100 };
-        let p2Data = { x: 3, hp: 100 };
+        let p1Data = { x: -3, z: 0, hp: 100 };
+        let p2Data = { x: 3, z: 0, hp: 100 };
 
         function init3DArena() {
             const container = document.getElementById('canvas3d-container');
+            container.innerHTML = '';
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0f172a);
 
             camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(0, 3, 10);
+            camera.position.set(0, 4, 11);
             camera.lookAt(0, 1, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -388,24 +418,20 @@
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // Lighting
             const ambient = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambient);
 
             const dirLight = new THREE.DirectionalLight(0xfacc15, 1);
             dirLight.position.set(5, 10, 5);
-            dirLight.castShadow = true;
             scene.add(dirLight);
 
-            // Tekken Arena Ring
+            // Ring
             const ringGeo = new THREE.CylinderGeometry(8, 8, 0.5, 32);
             const ringMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
             const ring = new THREE.Mesh(ringGeo, ringMat);
             ring.position.y = -0.25;
-            ring.receiveShadow = true;
             scene.add(ring);
 
-            // Ring Boundary Line
             const borderGeo = new THREE.TorusGeometry(7.8, 0.1, 16, 100);
             const borderMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
             const border = new THREE.Mesh(borderGeo, borderMat);
@@ -414,57 +440,37 @@
 
             // Construct 3D Characters
             p1Mesh = create3DFighter(charColors[selectedChar] || 0x38bdf8);
-            p1Mesh.position.set(p1Data.x, 0, 0);
+            p1Mesh.position.set(p1Data.x, 0, p1Data.z);
             scene.add(p1Mesh);
 
-            p2Mesh = create3DFighter(0xef4444);
-            p2Mesh.position.set(p2Data.x, 0, 0);
-            p2Mesh.rotation.y = Math.PI;
+            p2Mesh = create3DFighter(charColors[opponentChar] || 0xef4444);
+            p2Mesh.position.set(p2Data.x, 0, p2Data.z);
             scene.add(p2Mesh);
-
-            window.addEventListener('resize', () => {
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
-            });
 
             animateLoop();
         }
 
         function create3DFighter(colorHex) {
             const group = new THREE.Group();
-
-            // Torso
             const bodyGeo = new THREE.BoxGeometry(0.8, 1.2, 0.5);
             const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 1.2;
             group.add(body);
 
-            // Head
             const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xfde047 });
             const head = new THREE.Mesh(headGeo, headMat);
             head.position.y = 2.1;
             group.add(head);
 
-            // Limbs (Arms / Legs)
             const limbGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.9);
             const limbMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
-
-            const leftArm = new THREE.Mesh(limbGeo, limbMat);
-            leftArm.position.set(-0.55, 1.3, 0);
-            leftArm.name = "leftArm";
-            group.add(leftArm);
 
             const rightArm = new THREE.Mesh(limbGeo, limbMat);
             rightArm.position.set(0.55, 1.3, 0);
             rightArm.name = "rightArm";
             group.add(rightArm);
-
-            const leftLeg = new THREE.Mesh(limbGeo, limbMat);
-            leftLeg.position.set(-0.25, 0.45, 0);
-            group.add(leftLeg);
 
             const rightLeg = new THREE.Mesh(limbGeo, limbMat);
             rightLeg.position.set(0.25, 0.45, 0);
@@ -476,22 +482,20 @@
 
         function animateLoop() {
             requestAnimationFrame(animateLoop);
+            if (!p1Mesh || !p2Mesh) return;
 
-            // Smooth Position Updates
             p1Mesh.position.x += (p1Data.x - p1Mesh.position.x) * 0.2;
+            p1Mesh.position.z += (p1Data.z - p1Mesh.position.z) * 0.2;
             p2Mesh.position.x += (p2Data.x - p2Mesh.position.x) * 0.2;
+            p2Mesh.position.z += (p2Data.z - p2Mesh.position.z) * 0.2;
 
-            // Camera Panning
             camera.position.x = (p1Mesh.position.x + p2Mesh.position.x) / 2;
-
             renderer.render(scene, camera);
         }
 
-        // ATTACK & SUMMONING ANIMATIONS
         function animateAttack(mesh, type) {
             const arm = mesh.getObjectByName('rightArm');
             const leg = mesh.getObjectByName('rightLeg');
-
             if (type === 'punch' && arm) {
                 arm.rotation.x = -Math.PI / 2;
                 setTimeout(() => arm.rotation.x = 0, 200);
@@ -501,37 +505,29 @@
             }
         }
 
-        function triggerSummonMesh(mesh, char) {
-            const summonMeshGeo = new THREE.OctahedronGeometry(0.8, 0);
-            const summonMeshMat = new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true });
-            const sMesh = new THREE.Mesh(summonMeshGeo, summonMeshMat);
+        function triggerSummonMesh(mesh) {
+            const sMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.8, 0), new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true }));
             sMesh.position.set(mesh.position.x, 2.5, mesh.position.z);
             scene.add(sMesh);
-
             let scale = 1;
-            const interval = setInterval(() => {
-                scale += 0.1;
-                sMesh.scale.set(scale, scale, scale);
-                sMesh.rotation.y += 0.2;
-            }, 30);
-
-            setTimeout(() => {
-                clearInterval(interval);
-                scene.remove(sMesh);
-            }, 1000);
+            const iv = setInterval(() => { scale += 0.1; sMesh.scale.set(scale, scale, scale); }, 30);
+            setTimeout(() => { clearInterval(iv); scene.remove(sMesh); }, 1000);
         }
 
-        // --- GAME CONTROLS & PVP ACTIONS ---
-        function triggerMove(dir) {
-            p1Data.x = Math.max(-6, Math.min(6, p1Data.x + dir * 0.6));
+        // --- GAME CONTROLS & MOVEMENT IN ALL 4 DIRECTIONS ---
+        function moveDirection(dir) {
+            const speed = 0.4;
+            if (dir === 'left') p1Data.x = Math.max(-7, p1Data.x - speed);
+            if (dir === 'right') p1Data.x = Math.min(7, p1Data.x + speed);
+            if (dir === 'up') p1Data.z = Math.max(-4, p1Data.z - speed);
+            if (dir === 'down') p1Data.z = Math.min(4, p1Data.z + speed);
             broadcastPVPState('move');
         }
 
         function triggerAttack(type) {
             animateAttack(p1Mesh, type);
-
-            // Check Hit Range
-            if (Math.abs(p1Data.x - p2Data.x) < 1.8) {
+            const dist = Math.hypot(p1Data.x - p2Data.x, p1Data.z - p2Data.z);
+            if (dist < 2.2) {
                 const dmg = type === 'punch' ? 12 : 20;
                 p2Data.hp = Math.max(0, p2Data.hp - dmg);
                 updateHUD();
@@ -541,8 +537,9 @@
         }
 
         function triggerSummon() {
-            triggerSummonMesh(p1Mesh, selectedChar);
-            if (Math.abs(p1Data.x - p2Data.x) < 3.5) {
+            triggerSummonMesh(p1Mesh);
+            const dist = Math.hypot(p1Data.x - p2Data.x, p1Data.z - p2Data.z);
+            if (dist < 4.0) {
                 p2Data.hp = Math.max(0, p2Data.hp - 35);
                 updateHUD();
                 checkMatchOver();
@@ -559,18 +556,32 @@
 
         function checkMatchOver() {
             if (p1Data.hp <= 0 || p2Data.hp <= 0) {
-                const winner = p1Data.hp > 0 ? currentUser : (activeChallenge ? activeChallenge.challenged_username : 'OPPONENT');
+                const winner = p1Data.hp > 0 ? currentUser : (isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username);
                 document.getElementById('announcer-msg').textContent = `${winner.toUpperCase()} WINS THE MATCH!`;
                 document.getElementById('battle-announcer').classList.remove('hidden');
             }
         }
 
-        // KEYBOARD CONTROLS MAPPED TO A, S, Z, X & SPACE
+        function rematch() {
+            p1Data = { x: -3, z: 0, hp: 100 };
+            p2Data = { x: 3, z: 0, hp: 100 };
+            updateHUD();
+            document.getElementById('battle-announcer').classList.add('hidden');
+            broadcastPVPState('rematch');
+        }
+
+        function returnToLobby() {
+            location.reload();
+        }
+
+        // KEYBOARD CONTROLS FOR ARROW KEYS & ACTIONS
         window.addEventListener('keydown', e => {
             if (document.getElementById('screen-battle').classList.contains('hidden')) return;
             const key = e.key.toLowerCase();
-            if (key === 'a') triggerMove(-1);
-            if (key === 's') triggerMove(1);
+            if (e.key === 'ArrowLeft') moveDirection('left');
+            if (e.key === 'ArrowRight') moveDirection('right');
+            if (e.key === 'ArrowUp') moveDirection('up');
+            if (e.key === 'ArrowDown') moveDirection('down');
             if (key === 'z') triggerAttack('punch');
             if (key === 'x') triggerAttack('kick');
             if (e.code === 'Space') {
