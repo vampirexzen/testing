@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord Clone - WebRTC & Supabase</title>
+  <title>Discord Clone - Supabase Auth & WebRTC</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* Custom Scrollbar for Discord Vibe */
+    /* Custom Scrollbar for Authentic Discord Look */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -31,79 +31,68 @@
 </head>
 <body class="h-full overflow-hidden flex flex-col">
 
-  <!-- ==================== SETUP / AUTH MODAL ==================== -->
+  <!-- ==================== AUTHENTICATION MODAL ==================== -->
   <div id="authModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-    <div class="bg-[#313338] border border-[#2b2d31] w-full max-w-md rounded-lg p-6 shadow-2xl text-center space-y-4">
-      <div class="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto shadow-lg">
-        <i class="fa-brands fa-discord text-3xl text-white"></i>
+    <div class="bg-[#313338] border border-[#2b2d31] w-full max-w-md rounded-lg p-6 shadow-2xl space-y-5">
+      
+      <!-- Logo & Header -->
+      <div class="text-center space-y-2">
+        <div class="w-14 h-14 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto shadow-lg">
+          <i class="fa-brands fa-discord text-3xl text-white"></i>
+        </div>
+        <h2 id="authTitle" class="text-2xl font-bold text-white">Welcome Back!</h2>
+        <p id="authSubtitle" class="text-xs text-gray-400">We're so excited to see you again!</p>
       </div>
-      <h2 class="text-2xl font-bold text-white">Welcome back!</h2>
-      <p class="text-sm text-gray-400">Enter a username to join the real-time workspace.</p>
 
-      <div class="text-left space-y-2">
-        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Username</label>
-        <input id="authUsernameInput" type="text" placeholder="e.g. CyberKnight" class="w-full bg-[#1e1f22] text-white p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]" onkeydown="if(event.key === 'Enter') initUserSession()">
+      <!-- Sign In / Sign Up Tab Switcher -->
+      <div class="flex border-b border-[#3f4147] text-sm font-semibold">
+        <button id="tabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]">Sign In</button>
+        <button id="tabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent">Create Account</button>
       </div>
 
-      <div id="authErrorMsg" class="text-xs text-red-400 font-medium text-left hidden"></div>
+      <!-- Auth Form Fields -->
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        
+        <!-- Username Field (Sign Up Only) -->
+        <div id="usernameField" class="space-y-1 hidden">
+          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Username <span class="text-red-400">*</span></label>
+          <input id="authUsernameInput" type="text" placeholder="e.g. CyberKnight" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
+        </div>
 
-      <button id="joinBtn" onclick="initUserSession()" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition text-white font-semibold py-3 rounded shadow flex items-center justify-center space-x-2">
-        <span id="joinBtnText">Enter Discord</span>
-        <i id="joinSpinner" class="fa-solid fa-spinner animate-spin hidden"></i>
-      </button>
+        <!-- Email Field -->
+        <div class="space-y-1">
+          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Email <span class="text-red-400">*</span></label>
+          <input id="authEmailInput" type="email" required placeholder="name@domain.com" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
+        </div>
+
+        <!-- Password Field -->
+        <div class="space-y-1">
+          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Password <span class="text-red-400">*</span></label>
+          <input id="authPasswordInput" type="password" required placeholder="••••••••" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
+        </div>
+
+        <!-- Error Feedback Banner -->
+        <div id="authErrorMsg" class="text-xs text-red-400 font-medium hidden"></div>
+
+        <!-- Submit Button -->
+        <button id="authSubmitBtn" type="submit" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition text-white font-semibold py-3 rounded shadow flex items-center justify-center space-x-2">
+          <span id="authBtnText">Sign In</span>
+          <i id="authSpinner" class="fa-solid fa-spinner animate-spin hidden"></i>
+        </button>
+      </form>
     </div>
   </div>
 
-  <!-- SQL Modal Kept for Emergency Reference if needed via JS trigger, hidden from UI -->
-  <div id="sqlGuideModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#2b2d31] w-full max-w-3xl rounded-lg p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
-      <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
-        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-database text-yellow-400 mr-2"></i>Supabase Database Setup SQL</h3>
-        <button onclick="toggleSqlGuide()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-      </div>
-      <p class="text-xs text-gray-300">Run the following script inside your Supabase project's SQL Editor to enable tables, functions, and real-time support:</p>
-      <pre class="bg-[#1e1f22] p-4 rounded text-xs text-green-400 overflow-x-auto flex-1 font-mono select-all border border-[#111214]">
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username TEXT NOT NULL,
-  tag TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(username, tag)
-);
-
-CREATE TABLE IF NOT EXISTS public.friends (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  friend_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status TEXT CHECK (status IN ('pending', 'accepted')) DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
-      </pre>
-    </div>
-  </div>
-
-  <!-- ==================== MAIN APPLICATION APP ==================== -->
+  <!-- ==================== MAIN APPLICATION INTERFACE ==================== -->
   <div class="flex-1 flex overflow-hidden">
     
-    <!-- Left Sidebar: Server Icons -->
+    <!-- 1. Server Navigation Rail (Leftmost) -->
     <div class="w-18 bg-[#1e1f22] flex flex-col items-center py-3 space-y-3 border-r border-[#2b2d31] flex-shrink-0">
-      <div class="w-12 h-12 bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-white shadow" title="Direct Messages">
+      <div onclick="switchTab('friends')" class="w-12 h-12 bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-white shadow" title="Direct Messages">
         <i class="fa-brands fa-discord text-2xl"></i>
       </div>
       <div class="w-8 h-[2px] bg-[#35363c] rounded"></div>
-      <div class="w-12 h-12 bg-[#313338] hover:bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-gray-300 hover:text-white" title="Explore Servers">
+      <div class="w-12 h-12 bg-[#313338] hover:bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-gray-300 hover:text-white" title="Explore Public Servers">
         <i class="fa-solid fa-compass text-xl"></i>
       </div>
       <div class="w-12 h-12 bg-[#313338] hover:bg-green-600 hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-green-500 hover:text-white" title="Add Server">
@@ -111,19 +100,19 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       </div>
     </div>
 
-    <!-- Second Sidebar: Friends & DMs List -->
+    <!-- 2. Direct Messages / Friends Channel Sidebar -->
     <div class="w-60 bg-[#2b2d31] flex flex-col border-r border-[#1e1f22] flex-shrink-0">
-      <!-- Search Header -->
+      <!-- Search Trigger -->
       <div class="h-12 border-b border-[#1f2023] px-3 flex items-center">
-        <button onclick="switchTab('friends')" class="w-full bg-[#1e1f22] text-gray-400 text-xs px-3 py-1.5 rounded text-left hover:text-gray-200 flex items-center justify-between">
-          <span>Find or start a conversation</span>
+        <button onclick="switchTab('friends'); filterFriends('add')" class="w-full bg-[#1e1f22] text-gray-400 text-xs px-3 py-1.5 rounded text-left hover:text-gray-200 flex items-center justify-between">
+          <span>Find or add a friend</span>
           <i class="fa-solid fa-magnifying-glass text-xs"></i>
         </button>
       </div>
 
       <!-- Navigation Links -->
       <div class="p-2 space-y-1 border-b border-[#1f2023]">
-        <button onclick="switchTab('friends')" id="navFriendsBtn" class="w-full flex items-center space-x-3 px-3 py-2 rounded text-gray-300 hover:bg-[#35373c] hover:text-white active font-medium text-sm">
+        <button onclick="switchTab('friends')" id="navFriendsBtn" class="w-full flex items-center space-x-3 px-3 py-2 rounded text-gray-300 hover:bg-[#35373c] hover:text-white font-medium text-sm">
           <i class="fa-solid fa-user-group text-gray-400 w-5"></i>
           <span>Friends</span>
         </button>
@@ -132,24 +121,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       <!-- Direct Messages Section Header -->
       <div class="px-4 pt-4 pb-1 flex justify-between items-center text-xs font-bold text-gray-400 uppercase">
         <span>Direct Messages</span>
-        <i class="fa-solid fa-plus hover:text-white cursor-pointer" title="Create Direct Message" onclick="switchTab('friends')"></i>
+        <i class="fa-solid fa-plus hover:text-white cursor-pointer" title="Add Friend" onclick="filterFriends('add')"></i>
       </div>
 
-      <!-- DM Friends List -->
+      <!-- Friends DM List -->
       <div id="dmUserList" class="flex-1 overflow-y-auto px-2 space-y-0.5">
-        <!-- Dynamic Friends will be inserted here -->
         <div class="text-xs text-gray-500 p-3 text-center">Loading friends...</div>
       </div>
 
-      <!-- User Profile & Audio Control Bar at Bottom Left -->
+      <!-- Bottom User Profile & Audio Quick Bar -->
       <div class="h-14 bg-[#232428] px-2 flex items-center justify-between border-t border-[#1e1f22]">
         <div class="flex items-center space-x-2 truncate cursor-pointer hover:bg-[#313338] p-1 rounded" onclick="openDeviceSettings()">
           <div class="relative">
-            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white text-xs" id="userAvatar">U</div>
+            <div class="w-8 h-8 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs" id="userAvatar">U</div>
             <div class="w-3 h-3 bg-green-500 rounded-full absolute -bottom-0.5 -right-0.5 border-2 border-[#232428]"></div>
           </div>
           <div class="truncate text-xs">
-            <div id="currentUserName" class="font-semibold text-white leading-tight truncate">Not Logged In</div>
+            <div id="currentUserName" class="font-semibold text-white leading-tight truncate">User</div>
             <div id="currentUserTag" class="text-gray-400 text-[10px] leading-tight">#0000</div>
           </div>
         </div>
@@ -164,16 +152,19 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           <button onclick="openDeviceSettings()" class="w-7 h-7 hover:bg-[#35373c] hover:text-white rounded flex items-center justify-center" title="User Settings">
             <i class="fa-solid fa-gear"></i>
           </button>
+          <button onclick="handleSignOut()" class="w-7 h-7 hover:bg-red-900/40 hover:text-red-400 rounded flex items-center justify-center ml-1" title="Sign Out">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Main Dynamic Content Pane (Friends Tab / Active DM Chat Panel) -->
+    <!-- 3. Dynamic Center View Pane -->
     <div class="flex-1 flex flex-col bg-[#313338] relative">
 
-      <!-- ==================== FRIENDS MANAGEMENT VIEW ==================== -->
+      <!-- ==================== FRIENDS MANAGEMENT TAB ==================== -->
       <div id="friendsView" class="flex-1 flex flex-col">
-        <!-- Top Navigation Header -->
+        <!-- Friends Top Header Bar -->
         <div class="h-12 border-b border-[#1f2023] px-4 flex items-center space-x-6">
           <div class="flex items-center space-x-2 text-white font-bold text-sm">
             <i class="fa-solid fa-user-group text-gray-400"></i>
@@ -181,57 +172,71 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           </div>
           <div class="h-4 w-[1px] bg-[#3f4147]"></div>
           <div class="flex items-center space-x-4 text-sm font-medium">
+            <button onclick="filterFriends('online')" id="tabOnlineFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded">Online</button>
             <button onclick="filterFriends('all')" id="tabAllFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded">All</button>
             <button onclick="filterFriends('pending')" id="tabPendingFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded flex items-center space-x-1">
               <span>Pending</span>
               <span id="pendingBadge" class="hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">0</span>
             </button>
-            <button onclick="filterFriends('add')" id="tabAddFriend" class="bg-green-600 text-white px-2.5 py-1 rounded hover:bg-green-700">Add Friend</button>
+            <button onclick="filterFriends('add')" id="tabAddFriend" class="bg-green-600 text-white px-2.5 py-1 rounded hover:bg-green-700 font-semibold">Add Friend</button>
           </div>
         </div>
 
-        <!-- Friends Content View -->
-        <div class="flex-1 p-6 overflow-y-auto">
+        <!-- Friends Content Body -->
+        <div class="flex-1 p-6 overflow-y-auto space-y-6">
+          
           <!-- Add Friend Panel -->
           <div id="addFriendSection" class="max-w-xl space-y-4">
             <h3 class="text-white font-bold text-base uppercase tracking-wide">Add Friend</h3>
-            <p class="text-xs text-gray-400">You can add friends by their username (e.g. zed) or full Tag format (e.g. zed#1234).</p>
+            <p class="text-xs text-gray-400">You can add friends by their exact Username#Tag (e.g. zed#1234) or by username (e.g. zed).</p>
             <div class="flex items-center bg-[#1e1f22] p-3 rounded-lg border border-[#111214] focus-within:border-[#5865F2]">
-              <input id="friendTagInput" type="text" placeholder="Enter username (e.g. zed) or Username#Tag" class="bg-transparent flex-1 text-sm text-white focus:outline-none">
-              <button onclick="sendFriendRequest()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-sm font-medium transition">
+              <input id="friendTagInput" type="text" placeholder="Enter Username#Tag (e.g. zed#1234)" class="bg-transparent flex-1 text-sm text-white focus:outline-none" onkeydown="if(event.key === 'Enter') sendFriendRequest()">
+              <button onclick="sendFriendRequest()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-sm font-semibold transition">
                 Send Request
               </button>
             </div>
+            <!-- Dynamic Explicit Status Feedback -->
             <div id="addFriendStatus" class="text-xs font-medium min-h-[20px]"></div>
+
+            <!-- Community Members Quick Suggestions -->
+            <div class="pt-4 space-y-3">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Registered Users Directory</h4>
+              <div id="communityUserList" class="space-y-2">
+                <div class="text-xs text-gray-500">Loading registered users...</div>
+              </div>
+            </div>
           </div>
 
-          <!-- Friends List Render Area -->
+          <!-- Friends List Render Container -->
           <div id="friendsListSection" class="mt-4">
             <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3" id="friendsSectionTitle">All Friends</div>
             <div id="friendsContainer" class="space-y-2">
-              <!-- Active/Pending List items rendered here -->
+              <!-- Rendered Dynamically -->
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ==================== DIRECT MESSAGE & CALL VIEW ==================== -->
+      <!-- ==================== DIRECT MESSAGES & WEBRTC CALL PANEL ==================== -->
       <div id="chatView" class="flex-1 flex flex-col hidden">
-        <!-- Chat Top Header -->
+        
+        <!-- DM Header Bar -->
         <div class="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <span class="text-gray-400 font-bold text-lg">@</span>
-            <span id="activeChatUser" class="text-white font-bold text-sm">Select a user</span>
+            <span id="activeChatUser" class="text-white font-bold text-sm">Select a Friend</span>
+            <span id="activeChatTag" class="text-gray-400 text-xs font-normal"></span>
           </div>
-          <!-- Call Initiate Buttons -->
+
+          <!-- Call Action Controls -->
           <div class="flex items-center space-x-4 text-gray-300">
             <button onclick="startCall(false)" title="Start Audio Call" class="hover:text-white text-lg"><i class="fa-solid fa-phone"></i></button>
             <button onclick="startCall(true)" title="Start Video Call" class="hover:text-white text-lg"><i class="fa-solid fa-video"></i></button>
           </div>
         </div>
 
-        <!-- Call Audio/Video Panel (Hidden by default, shown during active call) -->
-        <div id="activeCallPanel" class="bg-[#111214] p-4 hidden border-b border-[#2b2d31] transition-all flex flex-col items-center">
+        <!-- Active Call Overlay Panel (Displays during active call) -->
+        <div id="activeCallPanel" class="bg-[#111214] p-4 hidden border-b border-[#2b2d31] transition-all flex flex-col items-center shadow-inner">
           <div class="text-xs text-gray-400 mb-2 flex items-center space-x-2">
             <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             <span id="callStatusText">Call Connected</span>
@@ -239,20 +244,25 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
 
           <!-- Video Grids -->
           <div class="flex flex-wrap justify-center gap-4 w-full max-w-4xl">
-            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800">
+            <!-- Local Stream -->
+            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800 shadow">
               <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
               <span class="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded">You</span>
             </div>
-            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800">
+            <!-- Remote Stream -->
+            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800 shadow">
               <video id="remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
               <span class="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded" id="remotePeerName">Peer</span>
             </div>
           </div>
 
-          <!-- In-Call Control Toolbar -->
-          <div class="flex items-center space-x-4 mt-4 bg-[#2b2d31] px-4 py-2 rounded-full">
-            <button id="callMicBtn" onclick="toggleMute()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white">
+          <!-- In-Call Toolbar -->
+          <div class="flex items-center space-x-4 mt-4 bg-[#2b2d31] px-5 py-2.5 rounded-full shadow-lg">
+            <button id="callMicBtn" onclick="toggleMute()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Mute Mic">
               <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button id="callVideoBtn" onclick="toggleCamera()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Toggle Video">
+              <i class="fa-solid fa-video"></i>
             </button>
             <button id="screenShareBtn" onclick="toggleScreenShare()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Share Screen">
               <i class="fa-solid fa-desktop"></i>
@@ -263,16 +273,16 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           </div>
         </div>
 
-        <!-- Chat Messages History Log -->
+        <!-- Chat Message Log -->
         <div id="messagesContainer" class="flex-1 p-4 overflow-y-auto space-y-4">
-          <!-- Messages will be injected here -->
+          <!-- Direct Messages rendered dynamically -->
         </div>
 
-        <!-- Chat Input Form -->
+        <!-- Chat Input Field -->
         <div class="p-4">
           <form onsubmit="sendMessage(event)" class="bg-[#383a40] rounded-lg px-4 py-2.5 flex items-center space-x-3">
             <button type="button" class="text-gray-400 hover:text-white"><i class="fa-solid fa-circle-plus text-lg"></i></button>
-            <input id="messageInput" type="text" placeholder="Message @User" class="bg-transparent flex-1 text-sm text-white focus:outline-none placeholder-gray-500">
+            <input id="messageInput" type="text" placeholder="Message @Friend" class="bg-transparent flex-1 text-sm text-white focus:outline-none placeholder-gray-500">
             <button type="submit" class="text-[#5865F2] hover:text-indigo-400 font-bold"><i class="fa-solid fa-paper-plane text-lg"></i></button>
           </form>
         </div>
@@ -281,7 +291,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
     </div>
   </div>
 
-  <!-- ==================== DEVICE / AUDIO SETTINGS MODAL ==================== -->
+  <!-- ==================== DEVICE SETTINGS MODAL ==================== -->
   <div id="deviceSettingsModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-[#313338] w-full max-w-lg rounded-lg p-6 space-y-5 shadow-2xl border border-[#2b2d31]">
       <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
@@ -289,22 +299,22 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         <button onclick="closeDeviceSettings()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
 
-      <!-- Input Device Selector -->
+      <!-- Microphone Input Selector -->
       <div class="space-y-1.5">
         <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Input Device (Microphone)</label>
-        <select id="audioInputSelect" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
+        <select id="audioInputSelect" onchange="switchAudioDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
       </div>
 
-      <!-- Output Device Selector -->
+      <!-- Audio Output Selector -->
       <div class="space-y-1.5">
-        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Output Device (Headphones/Speakers)</label>
-        <select id="audioOutputSelect" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
+        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Output Device (Speakers / Headphones)</label>
+        <select id="audioOutputSelect" onchange="switchAudioOutputDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
       </div>
 
-      <!-- Camera Selector -->
+      <!-- Video Camera Selector -->
       <div class="space-y-1.5">
         <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Video Camera</label>
-        <select id="videoInputSelect" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
+        <select id="videoInputSelect" onchange="switchVideoDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
       </div>
 
       <div class="flex justify-end pt-3">
@@ -313,27 +323,28 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
     </div>
   </div>
 
-  <!-- ==================== MAIN JAVASCRIPT LOGIC ==================== -->
+  <!-- ==================== MAIN JAVASCRIPT APP LOGIC ==================== -->
   <script>
-    // Supabase Configuration Credentials
+    // Supabase Client Config
     const SUPABASE_URL = "https://duzdubrqkkpgqljbnrlp.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1emR1YnJxa2twZ3FsamJucmxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzQ2NzIsImV4cCI6MjEwOTAxMDY3Mn0.K_KNICMsQxFHPZ6snlNMqjPXc8mvoVhroeXlg-PLBHQ";
-
-    // Initialize Supabase Client
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Global Application State Variables
-    let currentUser = null; // { id, username, tag }
-    let activeFriend = null; // Currently opened chat target profile
+    // Global State
+    let authMode = 'signin'; // 'signin' or 'signup'
+    let currentUser = null; // Profile record from public.profiles
+    let activeFriend = null; // Selected friend profile for DM
     let friendsList = [];
     let pendingRequests = [];
+    let communityUsers = [];
 
-    // Audio / Call States
+    // Audio & Call States
     let isMuted = false;
     let isDeafened = false;
+    let isVideoOn = true;
     let isScreenSharing = false;
 
-    // WebRTC & Streaming globals
+    // WebRTC & Media Globals
     let localStream = null;
     let peerConnection = null;
     let signalingChannel = null;
@@ -342,102 +353,138 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     };
 
-    // ==================== APP INITIALIZATION & PROFILE SETUP ====================
+    // ==================== AUTHENTICATION LOGIC ====================
 
-    async function initUserSession() {
-      const input = document.getElementById('authUsernameInput').value.trim();
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const tabIn = document.getElementById('tabSignIn');
+      const tabUp = document.getElementById('tabSignUp');
+      const uField = document.getElementById('usernameField');
+      const title = document.getElementById('authTitle');
+      const btnText = document.getElementById('authBtnText');
+
+      if (mode === 'signup') {
+        tabUp.className = "flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]";
+        tabIn.className = "flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent";
+        uField.classList.remove('hidden');
+        title.innerText = "Create an Account";
+        btnText.innerText = "Register";
+      } else {
+        tabIn.className = "flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]";
+        tabUp.className = "flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent";
+        uField.classList.add('hidden');
+        title.innerText = "Welcome Back!";
+        btnText.innerText = "Sign In";
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmailInput').value.trim();
+      const password = document.getElementById('authPasswordInput').value;
+      const username = document.getElementById('authUsernameInput').value.trim();
       const errEl = document.getElementById('authErrorMsg');
-      const btnText = document.getElementById('joinBtnText');
-      const spinner = document.getElementById('joinSpinner');
+      const spinner = document.getElementById('authSpinner');
 
       errEl.classList.add('hidden');
       errEl.innerText = "";
-
-      if (!input) {
-        errEl.innerText = "Please enter a valid username.";
-        errEl.classList.remove('hidden');
-        return;
-      }
-
-      // UI Loading state
-      btnText.innerText = "Connecting...";
       spinner.classList.remove('hidden');
 
       try {
-        let storedUser = JSON.parse(localStorage.getItem('discord_user') || 'null');
+        if (authMode === 'signup') {
+          if (!username) throw new Error("Please enter a username.");
 
-        if (storedUser && storedUser.username === input) {
-          // Verify user existing record
-          const { data: existing, error: fetchErr } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('id', storedUser.id)
-            .maybeSingle();
+          // 1. Supabase Auth Sign Up
+          const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
+            email,
+            password
+          });
+          if (authErr) throw authErr;
 
-          if (!fetchErr && existing) {
-            currentUser = existing;
-          }
-        }
-
-        if (!currentUser) {
-          // Check if username already exists in Supabase
-          const { data: existingUser } = await supabaseClient
-            .from('profiles')
-            .select('*')
-            .eq('username', input)
-            .limit(1)
-            .maybeSingle();
-
-          if (existingUser) {
-            currentUser = existingUser;
-          } else {
-            // Generate a unique 4-digit tag
+          if (authData.user) {
+            // Generate unique 4-digit tag
             const randomTag = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            // Insert profile into database
-            const { data: newProfile, error: insertErr } = await supabaseClient
+
+            // Insert into public.profiles
+            const { data: newProfile, error: profErr } = await supabaseClient
               .from('profiles')
-              .insert([{ username: input, tag: randomTag }])
+              .insert([{ id: authData.user.id, username, tag: randomTag }])
               .select()
               .single();
 
-            if (insertErr) {
-              throw insertErr;
-            }
+            if (profErr) throw profErr;
             currentUser = newProfile;
+          }
+        } else {
+          // Supabase Auth Sign In
+          const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
+          if (authErr) throw authErr;
+
+          if (authData.user) {
+            const { data: profile, error: profErr } = await supabaseClient
+              .from('profiles')
+              .select('*')
+              .eq('id', authData.user.id)
+              .maybeSingle();
+
+            if (profErr || !profile) throw new Error("Profile record not found.");
+            currentUser = profile;
           }
         }
 
-        // Store user locally
-        localStorage.setItem('discord_user', JSON.stringify(currentUser));
-
-        // Update Dashboard UI Header
-        document.getElementById('currentUserName').innerText = currentUser.username;
-        document.getElementById('currentUserTag').innerText = `#${currentUser.tag}`;
-        document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
-
-        // Hide Auth Modal
-        document.getElementById('authModal').classList.add('hidden');
-
-        // Load initial friends & listen to subscriptions
-        await loadFriends();
-        setupRealtimeSubscriptions();
-        initAudioVideoDevices();
+        initializeUserApp();
 
       } catch (err) {
-        console.error("Auth Exception:", err);
-        errEl.innerText = "Unable to connect. Please make sure database tables exist in Supabase.";
+        console.error("Auth Error:", err);
+        errEl.innerText = err.message || "Authentication failed. Check credentials.";
         errEl.classList.remove('hidden');
       } finally {
-        btnText.innerText = "Enter Discord";
         spinner.classList.add('hidden');
       }
+    }
+
+    async function handleSignOut() {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    // Auto Session Restorer
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && !currentUser) {
+        const { data: profile } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile) {
+          currentUser = profile;
+          initializeUserApp();
+        }
+      }
+    });
+
+    function initializeUserApp() {
+      document.getElementById('currentUserName').innerText = currentUser.username;
+      document.getElementById('currentUserTag').innerText = `#${currentUser.tag}`;
+      document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
+
+      document.getElementById('authModal').classList.add('hidden');
+
+      loadFriends();
+      loadCommunityUsers();
+      setupRealtimeSubscriptions();
+      initAudioVideoDevices();
     }
 
     // ==================== REALTIME SUBSCRIPTIONS ====================
 
     function setupRealtimeSubscriptions() {
-      // Direct Message Real-time listener
+      // Direct Messaging Channel
       supabaseClient
         .channel('public:messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
@@ -448,7 +495,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         })
         .subscribe();
 
-      // Friend updates subscription
+      // Friends Status Sync Channel
       supabaseClient
         .channel('public:friends')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, () => {
@@ -456,7 +503,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         })
         .subscribe();
 
-      // WebRTC Signaling Broadcast Channel
+      // Signaling Channel for WebRTC
       signalingChannel = supabaseClient.channel('call_signaling');
       signalingChannel
         .on('broadcast', { event: 'signal' }, async ({ payload }) => {
@@ -477,25 +524,23 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         .subscribe();
     }
 
-    // ==================== FRIENDS MANAGEMENT ====================
+    // ==================== FRIENDS MANAGEMENT & EXPLICIT STATUS FEEDBACK ====================
 
     async function loadFriends() {
       if (!currentUser) return;
 
-      // Handle dual column queries cleanly (user_id/friend_id or sender_id/receiver_id)
       const { data, error } = await supabaseClient
         .from('friends')
         .select(`
-          id, status, 
-          user_id, friend_id,
+          id, status, user_id, friend_id,
           sender:profiles!user_id(*),
           receiver:profiles!friend_id(*)
         `)
         .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
 
       if (error) {
-        // Fallback check if schema uses sender_id / receiver_id
-        const { data: altData, error: altErr } = await supabaseClient
+        // Fallback for alternate schema naming
+        const { data: altData } = await supabaseClient
           .from('friends')
           .select(`
             id, status, sender_id, receiver_id,
@@ -504,7 +549,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           `)
           .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
-        if (altErr) return console.error("Load Friends error:", altErr);
         processFriendsData(altData, true);
         return;
       }
@@ -512,14 +556,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       processFriendsData(data, false);
     }
 
-    function processFriendsData(data, isAltSchema = false) {
+    function processFriendsData(data, isAlt = false) {
       friendsList = [];
       pendingRequests = [];
 
       if (!data) return;
 
       data.forEach(rel => {
-        const myIdCol = isAltSchema ? rel.sender_id : rel.user_id;
+        const myIdCol = isAlt ? rel.sender_id : rel.user_id;
         const isSender = myIdCol === currentUser.id;
         const friendProfile = isSender ? rel.receiver : rel.sender;
 
@@ -536,6 +580,46 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       renderFriendsView('all');
     }
 
+    async function loadCommunityUsers() {
+      const { data } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .neq('id', currentUser.id)
+        .limit(10);
+
+      communityUsers = data || [];
+      renderCommunityUsers();
+    }
+
+    function renderCommunityUsers() {
+      const container = document.getElementById('communityUserList');
+      if (!container) return;
+
+      if (communityUsers.length === 0) {
+        container.innerHTML = `<div class="text-xs text-gray-500">No other users registered yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = communityUsers.map(u => `
+        <div class="flex items-center justify-between p-2 bg-[#2b2d31] rounded border border-[#1f2023]">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white text-xs">
+              ${u.username[0].toUpperCase()}
+            </div>
+            <span class="text-xs font-semibold text-white">${u.username}<span class="text-gray-400 font-normal">#${u.tag}</span></span>
+          </div>
+          <button onclick="addFriendByTag('${u.username}#${u.tag}')" class="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs px-2.5 py-1 rounded">
+            + Add Friend
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addFriendByTag(tag) {
+      document.getElementById('friendTagInput').value = tag;
+      sendFriendRequest();
+    }
+
     async function sendFriendRequest() {
       const input = document.getElementById('friendTagInput').value.trim();
       const statusEl = document.getElementById('addFriendStatus');
@@ -549,57 +633,132 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       }
 
       let targetProfile = null;
-      let queryError = null;
 
       if (input.includes('#')) {
         const [uname, tag] = input.split('#');
-        const { data, error } = await supabaseClient
+        const { data } = await supabaseClient
           .from('profiles')
           .select('*')
-          .ilike('username', uname)
-          .eq('tag', tag)
+          .ilike('username', uname.trim())
+          .eq('tag', tag.trim())
           .maybeSingle();
 
         targetProfile = data;
-        queryError = error;
       } else {
-        const { data, error } = await supabaseClient
+        const { data } = await supabaseClient
           .from('profiles')
           .select('*')
           .ilike('username', input)
           .maybeSingle();
 
         targetProfile = data;
-        queryError = error;
       }
 
-      if (queryError || !targetProfile) {
-        statusEl.innerText = "User not found. Check exact username or tag.";
+      // Explicit Condition Checkers:
+      if (!targetProfile) {
+        statusEl.innerText = "User not found. Make sure you entered exact Username#Tag (e.g. zed#1234).";
         statusEl.classList.add("text-red-400");
         return;
       }
 
       if (targetProfile.id === currentUser.id) {
-        statusEl.innerText = "You cannot add yourself as friend.";
+        statusEl.innerText = "You cannot add yourself as a friend.";
         statusEl.classList.add("text-red-400");
         return;
       }
 
-      // Add record to DB
+      // Check existing friendship / pending request state
+      const isAlreadyFriend = friendsList.some(f => f.id === targetProfile.id);
+      if (isAlreadyFriend) {
+        statusEl.innerText = `You are already friends with ${targetProfile.username}#${targetProfile.tag}.`;
+        statusEl.classList.add("text-yellow-400");
+        return;
+      }
+
+      const pendingCheck = pendingRequests.find(p => p.id === targetProfile.id);
+      if (pendingCheck) {
+        if (pendingCheck.isIncoming) {
+          statusEl.innerText = `${targetProfile.username}#${targetProfile.tag} has already sent you a friend request! Check your Pending tab to accept.`;
+        } else {
+          statusEl.innerText = `Friend request already sent to ${targetProfile.username}#${targetProfile.tag} (Pending).`;
+        }
+        statusEl.classList.add("text-yellow-400");
+        return;
+      }
+
+      // Insert Request into Database
       const { error: sendErr } = await supabaseClient.from('friends').insert([{
-        sender_id: currentUser.id,
-        receiver_id: targetProfile.id,
+        user_id: currentUser.id,
+        friend_id: targetProfile.id,
         status: 'pending'
       }]);
 
       if (sendErr) {
-        statusEl.innerText = "Request already sent or existing friendship.";
-        statusEl.classList.add("text-yellow-400");
+        // Retry with alternate column naming if schema requires
+        await supabaseClient.from('friends').insert([{
+          sender_id: currentUser.id,
+          receiver_id: targetProfile.id,
+          status: 'pending'
+        }]);
+      }
+
+      statusEl.innerText = `Friend request sent to ${targetProfile.username}#${targetProfile.tag}!`;
+      statusEl.classList.add("text-green-400");
+      document.getElementById('friendTagInput').value = '';
+      await loadFriends();
+    }
+
+    async function acceptFriendRequest(requestId) {
+      await supabaseClient
+        .from('friends')
+        .update({ status: 'accepted' })
+        .eq('id', requestId);
+
+      await loadFriends();
+    }
+
+    async function rejectFriendRequest(requestId) {
+      await supabaseClient
+        .from('friends')
+        .delete()
+        .eq('id', requestId);
+
+      await loadFriends();
+    }
+
+    // ==================== REALTIME CHAT MESSAGING ====================
+
+    async function openChat(friend) {
+      activeFriend = friend;
+      document.getElementById('friendsView').classList.add('hidden');
+      document.getElementById('chatView').classList.remove('hidden');
+
+      document.getElementById('activeChatUser').innerText = friend.username;
+      document.getElementById('activeChatTag').innerText = `#${friend.tag}`;
+      document.getElementById('messagesContainer').innerHTML = `<div class="text-xs text-gray-500 text-center py-4">Loading messages...</div>`;
+
+      // Fetch message history
+      const { data: history } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${currentUser.id})`)
+        .order('created_at', { ascending: true });
+
+      const container = document.getElementById('messagesContainer');
+      container.innerHTML = "";
+
+      if (history && history.length > 0) {
+        history.forEach(appendMessage);
       } else {
-        statusEl.innerText = `Success! Friend request sent to ${targetProfile.username}#${targetProfile.tag}`;
-        statusEl.classList.add("text-green-400");
-        document.getElementById('friendTagInput').value = '';
-        await loadFriends();
+        container.innerHTML = `
+          <div class="text-center py-8 space-y-2">
+            <div class="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white">
+              ${friend.username[0].toUpperCase()}
+            </div>
+            <h3 class="text-xl font-bold text-white">${friend.username}</h3>
+            <p class="text-xs text-gray-400">This is the beginning of your direct message history with ${friend.username}#${friend.tag}.</p>
+          </div>
+        `;
       }
     }
 
@@ -622,13 +781,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       const container = document.getElementById('messagesContainer');
       const isMe = msg.sender_id === currentUser.id;
       const senderName = isMe ? currentUser.username : activeFriend.username;
-
       const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const msgDiv = document.createElement('div');
       msgDiv.className = "flex items-start space-x-3 hover:bg-[#2b2d31]/40 p-1.5 rounded transition";
       msgDiv.innerHTML = `
-        <div class="w-9 h-9 ${isMe ? 'bg-indigo-600' : 'bg-emerald-600'} rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
+        <div class="w-9 h-9 ${isMe ? 'bg-[#5865F2]' : 'bg-emerald-600'} rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
           ${senderName[0].toUpperCase()}
         </div>
         <div class="flex-1">
@@ -643,7 +801,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       container.scrollTop = container.scrollHeight;
     }
 
-    // ==================== WEBRTC CALLING ENGINE ====================
+    // ==================== WEBRTC VOICE / VIDEO CALLING ====================
 
     async function startCall(videoEnabled = false) {
       if (!activeFriend) return;
@@ -661,14 +819,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         document.getElementById('localVideo').srcObject = localStream;
         setupPeerConnection();
 
-        // Add local stream tracks to WebRTC
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-        // Create RTC Offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
-        // Send offer signal via Supabase Realtime Broadcast
         signalingChannel.send({
           type: 'broadcast',
           event: 'signal',
@@ -681,7 +836,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         });
 
       } catch (err) {
-        console.error("Media Error:", err);
+        console.error("Media error:", err);
         closeCallUI();
       }
     }
@@ -702,7 +857,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
-        // Send answer back
         signalingChannel.send({
           type: 'broadcast',
           event: 'signal',
@@ -721,7 +875,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
     function setupPeerConnection() {
       peerConnection = new RTCPeerConnection(rtcConfig);
 
-      // Handle ICE Candidates
       peerConnection.onicecandidate = (event) => {
         if (event.candidate && activeFriend) {
           signalingChannel.send({
@@ -736,7 +889,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         }
       };
 
-      // Remote stream track handler
       peerConnection.ontrack = (event) => {
         document.getElementById('remoteVideo').srcObject = event.streams[0];
         document.getElementById('callStatusText').innerText = `Call Active`;
@@ -768,7 +920,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       document.getElementById('activeCallPanel').classList.add('hidden');
     }
 
-    // Screen Share Feature
     async function toggleScreenShare() {
       if (!peerConnection) return;
 
@@ -788,13 +939,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           isScreenSharing = true;
 
           screenTrack.onended = () => {
-            toggleScreenShare(); // Revert back when user stops sharing via browser bar
+            toggleScreenShare();
           };
         } catch (err) {
-          console.error("Screen Share Error: ", err);
+          console.error("Screen share error:", err);
         }
       } else {
-        // Stop screen share and revert back to camera stream if active
         if (localStream && localStream.getVideoTracks().length > 0) {
           const videoTrack = localStream.getVideoTracks()[0];
           const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
@@ -805,7 +955,17 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       }
     }
 
-    // Audio Controls (Mute / Deafen)
+    function toggleCamera() {
+      isVideoOn = !isVideoOn;
+      if (localStream) {
+        localStream.getVideoTracks().forEach(t => t.enabled = isVideoOn);
+      }
+      const btn = document.getElementById('callVideoBtn');
+      if (btn) {
+        btn.innerHTML = isVideoOn ? `<i class="fa-solid fa-video"></i>` : `<i class="fa-solid fa-video-slash text-red-500"></i>`;
+      }
+    }
+
     function toggleMute() {
       isMuted = !isMuted;
       if (localStream) {
@@ -814,13 +974,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       const micBtns = [document.getElementById('micBtn'), document.getElementById('callMicBtn')];
       micBtns.forEach(btn => {
         if (!btn) return;
-        if (isMuted) {
-          btn.classList.add('text-red-500');
-          btn.innerHTML = `<i class="fa-solid fa-microphone-slash"></i>`;
-        } else {
-          btn.classList.remove('text-red-500');
-          btn.innerHTML = `<i class="fa-solid fa-microphone"></i>`;
-        }
+        btn.innerHTML = isMuted ? `<i class="fa-solid fa-microphone-slash text-red-500"></i>` : `<i class="fa-solid fa-microphone"></i>`;
       });
     }
 
@@ -830,16 +984,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       if (remoteVideo) remoteVideo.muted = isDeafened;
 
       const deafenBtn = document.getElementById('deafenBtn');
-      if (isDeafened) {
-        deafenBtn.classList.add('text-red-500');
-        deafenBtn.innerHTML = `<i class="fa-solid fa-ear-deaf"></i>`;
-      } else {
-        deafenBtn.classList.remove('text-red-500');
-        deafenBtn.innerHTML = `<i class="fa-solid fa-headphones"></i>`;
+      if (deafenBtn) {
+        deafenBtn.innerHTML = isDeafened ? `<i class="fa-solid fa-ear-deaf text-red-500"></i>` : `<i class="fa-solid fa-headphones"></i>`;
       }
     }
 
-    // ==================== DEVICE SELECTION LOGIC ====================
+    // ==================== HARDWARE DEVICE SELECTOR ====================
 
     async function initAudioVideoDevices() {
       try {
@@ -852,18 +1002,45 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         audioOut.innerHTML = "";
         videoIn.innerHTML = "";
 
-        devices.forEach((device, index) => {
-          const option = document.createElement('option');
-          option.value = device.deviceId;
-          option.text = device.label || `${device.kind} (${index + 1})`;
+        devices.forEach((device, idx) => {
+          const opt = document.createElement('option');
+          opt.value = device.deviceId;
+          opt.text = device.label || `${device.kind} (${idx + 1})`;
 
-          if (device.kind === 'audioinput') audioIn.appendChild(option);
-          else if (device.kind === 'audiooutput') audioOut.appendChild(option);
-          else if (device.kind === 'videoinput') videoIn.appendChild(option);
+          if (device.kind === 'audioinput') audioIn.appendChild(opt);
+          else if (device.kind === 'audiooutput') audioOut.appendChild(opt);
+          else if (device.kind === 'videoinput') videoIn.appendChild(opt);
         });
       } catch (err) {
-        console.warn("Could not list hardware devices: ", err);
+        console.warn("Media devices enumeration error:", err);
       }
+    }
+
+    async function switchAudioDevice() {
+      const deviceId = document.getElementById('audioInputSelect').value;
+      if (!localStream) return;
+      const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
+      const audioTrack = newStream.getAudioTracks()[0];
+      const sender = peerConnection?.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) sender.replaceTrack(audioTrack);
+    }
+
+    async function switchAudioOutputDevice() {
+      const deviceId = document.getElementById('audioOutputSelect').value;
+      const remoteVideo = document.getElementById('remoteVideo');
+      if (remoteVideo && typeof remoteVideo.setSinkId === 'function') {
+        await remoteVideo.setSinkId(deviceId);
+      }
+    }
+
+    async function switchVideoDevice() {
+      const deviceId = document.getElementById('videoInputSelect').value;
+      if (!localStream) return;
+      const newStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
+      const videoTrack = newStream.getVideoTracks()[0];
+      const sender = peerConnection?.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) sender.replaceTrack(videoTrack);
+      document.getElementById('localVideo').srcObject = newStream;
     }
 
     function openDeviceSettings() {
@@ -875,14 +1052,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       document.getElementById('deviceSettingsModal').classList.add('hidden');
     }
 
-    // ==================== UI HELPERS & SWITCHERS ====================
+    // ==================== UI NAVIGATION HELPERS ====================
 
     function renderDMList() {
       const container = document.getElementById('dmUserList');
       container.innerHTML = "";
 
       if (friendsList.length === 0) {
-        container.innerHTML = `<div class="text-xs text-gray-500 p-3 text-center">No active friends added yet.</div>`;
+        container.innerHTML = `<div class="text-xs text-gray-500 p-3 text-center">No active friends yet.</div>`;
         return;
       }
 
@@ -892,9 +1069,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         item.onclick = () => openChat(friend);
         item.innerHTML = `
           <div class="relative">
-            <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white text-xs">
+            <div class="w-8 h-8 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs">
               ${friend.username[0].toUpperCase()}
             </div>
+            <div class="w-2.5 h-2.5 bg-green-500 rounded-full absolute -bottom-0.5 -right-0.5 border border-[#2b2d31]"></div>
           </div>
           <div class="truncate text-xs flex-1">
             <div class="font-semibold text-white leading-tight truncate">${friend.username}</div>
@@ -930,8 +1108,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
               </div>
             </div>
             ${req.isIncoming ? `
-              <button onclick="acceptFriendRequest('${req.requestId}')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded font-medium">Accept</button>
-            ` : `<span class="text-xs text-gray-500 font-medium">Pending</span>`}
+              <div class="flex items-center space-x-2">
+                <button onclick="acceptFriendRequest('${req.requestId}')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded font-semibold">Accept</button>
+                <button onclick="rejectFriendRequest('${req.requestId}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded font-semibold">Reject</button>
+              </div>
+            ` : `<span class="text-xs text-gray-400 font-medium">Pending</span>`}
           `;
           container.appendChild(div);
         });
@@ -947,7 +1128,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
           div.className = "flex items-center justify-between p-3 bg-[#2b2d31] hover:bg-[#35373c] rounded-lg border border-[#1f2023]";
           div.innerHTML = `
             <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white text-xs">
+              <div class="w-9 h-9 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs">
                 ${friend.username[0].toUpperCase()}
               </div>
               <div>
@@ -955,7 +1136,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
                 <div class="text-[10px] text-green-400">Online</div>
               </div>
             </div>
-            <button onclick='openChat(${JSON.stringify(friend)})' class="w-8 h-8 bg-[#1e1f22] hover:bg-[#5865F2] hover:text-white rounded-full flex items-center justify-center text-gray-300">
+            <button onclick='openChat(${JSON.stringify(friend)})' class="w-8 h-8 bg-[#1e1f22] hover:bg-[#5865F2] hover:text-white rounded-full flex items-center justify-center text-gray-300 transition">
               <i class="fa-solid fa-message text-xs"></i>
             </button>
           `;
@@ -997,11 +1178,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       }
     }
 
-    function toggleSqlGuide() {
-      const modal = document.getElementById('sqlGuideModal');
-      modal.classList.toggle('hidden');
-    }
-
     function escapeHtml(text) {
       return text
         .replace(/&/g, "&amp;")
@@ -1010,16 +1186,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
-
-    // Auto check if already logged in session
-    window.onload = function() {
-      const stored = localStorage.getItem('discord_user');
-      if (stored) {
-        try {
-          document.getElementById('authUsernameInput').value = JSON.parse(stored).username;
-        } catch(e){}
-      }
-    };
   </script>
 </body>
 </html>
