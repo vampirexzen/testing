@@ -13,8 +13,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .arcade-font { font-family: 'Press Start 2P', monospace; }
-        body { background: #090d16; color: #fff; overflow-x: hidden; user-select: none; }
-        .glow-box { box-shadow: 0 0 20px rgba(234, 179, 8, 0.25); }
+        body { background: #070a12; color: #fff; overflow-x: hidden; user-select: none; }
+        .glow-box { box-shadow: 0 0 25px rgba(234, 179, 8, 0.3); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
@@ -25,7 +25,7 @@
         <!-- HEADER -->
         <div class="text-center mb-4">
             <h1 class="arcade-font text-xl sm:text-3xl text-yellow-400 drop-shadow-[0_4px_4px_rgba(0,0,0,0.9)]">TEKKEN 3D PVP SHOWDOWN</h1>
-            <p class="arcade-font text-[9px] sm:text-xs text-cyan-400 mt-2">1V1 ONLINE REAL-TIME MULTIPLAYER</p>
+            <p class="arcade-font text-[9px] sm:text-xs text-cyan-400 mt-2">1V1 REAL-TIME MULTIPLAYER</p>
         </div>
 
         <!-- 1. AUTH / REGISTER SCREEN -->
@@ -73,7 +73,7 @@
                 <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col justify-center text-center space-y-3">
                     <h3 class="arcade-font text-xs text-cyan-400">3D TEKKEN PVP CONTROLS</h3>
                     <div class="arcade-font text-[10px] text-slate-300 space-y-2 text-left bg-slate-900 p-3 rounded border border-slate-800">
-                        <p>• <span class="text-yellow-400">ARROW KEYS / ON-SCREEN PAD</span> : MOVE (LEFT, RIGHT, UP, DOWN)</p>
+                        <p>• <span class="text-yellow-400">ARROW KEYS / D-PAD</span> : MOVE (UP/DOWN/LEFT/RIGHT)</p>
                         <p>• <span class="text-red-400">Z / PUNCH</span> : LIGHT ATTACK</p>
                         <p>• <span class="text-purple-400">X / KICK</span> : HEAVY ATTACK</p>
                         <p>• <span class="text-cyan-400">SPACE / SUMMON</span> : ULTIMATE SUMMON</p>
@@ -82,38 +82,38 @@
             </div>
         </div>
 
-        <!-- 3. CHARACTER SELECTION & WAITING SCREEN -->
+        <!-- 3. CHARACTER SELECTION SCREEN -->
         <div id="screen-char-select" class="hidden space-y-6 text-center py-6">
-            <h2 class="arcade-font text-lg text-yellow-400">SELECT YOUR FIGHTER</h2>
+            <h2 class="arcade-font text-lg text-yellow-400">SELECT YOUR POLITICIAN FIGHTER</h2>
             <div id="char-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 <div onclick="pickChar('Modi ji')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🇮🇳</div>
                     <div class="arcade-font text-xs text-yellow-300">Modi ji</div>
-                    <div class="text-[9px] text-slate-400 mt-2">Summon: Yogi</div>
+                    <div class="text-[9px] text-amber-400 mt-2">Summon: Yogi</div>
                 </div>
                 <div onclick="pickChar('Trump')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🇺🇸</div>
                     <div class="arcade-font text-xs text-yellow-300">Trump</div>
-                    <div class="text-[9px] text-slate-400 mt-2">Summon: Epstein</div>
+                    <div class="text-[9px] text-amber-400 mt-2">Summon: Epstein</div>
                 </div>
                 <div onclick="pickChar('Putin')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🇷🇺</div>
                     <div class="arcade-font text-xs text-yellow-300">Putin</div>
-                    <div class="text-[9px] text-slate-400 mt-2">Summon: Army</div>
+                    <div class="text-[9px] text-amber-400 mt-2">Summon: Army</div>
                 </div>
                 <div onclick="pickChar('Kim jong un')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🇰🇵</div>
                     <div class="arcade-font text-xs text-yellow-300">Kim jong un</div>
-                    <div class="text-[9px] text-slate-400 mt-2">Summon: Red button</div>
+                    <div class="text-[9px] text-amber-400 mt-2">Summon: Red button</div>
                 </div>
                 <div onclick="pickChar('Diddy')" class="bg-slate-800 border-2 border-slate-600 hover:border-yellow-400 p-3 rounded-lg cursor-pointer transition transform hover:scale-105">
                     <div class="text-3xl mb-1">🛢️</div>
                     <div class="arcade-font text-xs text-yellow-300">Diddy</div>
-                    <div class="text-[9px] text-slate-400 mt-2">Summon: 1000 baby oil</div>
+                    <div class="text-[9px] text-amber-400 mt-2">Summon: 1000 baby oil</div>
                 </div>
             </div>
             <div id="waiting-banner" class="hidden arcade-font text-xs text-amber-300 animate-pulse mt-6">
-                Waiting for opponent to select their character...
+                Waiting for opponent to select their fighter...
             </div>
         </div>
 
@@ -145,18 +145,19 @@
             <!-- THREE.JS 3D CANVAS STAGE -->
             <div class="relative w-full aspect-[2/1] bg-black border-4 border-yellow-500 rounded-lg overflow-hidden">
                 <div id="canvas3d-container" class="w-full h-full"></div>
-                <div id="battle-announcer" class="absolute inset-0 flex flex-col items-center justify-center arcade-font text-xl text-yellow-300 bg-black/80 hidden">
+                <div id="battle-announcer" class="absolute inset-0 flex flex-col items-center justify-center arcade-font text-lg text-yellow-300 bg-black/85 hidden">
                     <span id="announcer-msg">MATCH START</span>
+                    <span id="rematch-status" class="text-xs text-cyan-300 mt-2"></span>
                     <div class="flex gap-3 mt-4">
-                        <button onclick="rematch()" class="bg-green-600 text-white px-4 py-2 text-xs rounded hover:bg-green-500 cursor-pointer">REMATCH</button>
-                        <button onclick="returnToLobby()" class="bg-yellow-500 text-slate-950 px-4 py-2 text-xs rounded hover:bg-yellow-400 cursor-pointer">LOBBY</button>
+                        <button id="btn-rematch" onclick="requestRematch()" class="bg-green-600 text-white px-4 py-2 text-xs rounded hover:bg-green-500 cursor-pointer">REMATCH</button>
+                        <button onclick="requestLobbyExit()" class="bg-yellow-500 text-slate-950 px-4 py-2 text-xs rounded hover:bg-yellow-400 cursor-pointer">LOBBY</button>
                     </div>
                 </div>
             </div>
 
-            <!-- ON-SCREEN MOBILE CONTROLS -->
+            <!-- CONTROLS SECTION -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
-                <!-- Directional D-Pad for Mobile -->
+                <!-- Mobile D-Pad -->
                 <div class="grid grid-cols-3 gap-1 bg-slate-800 p-2 rounded border border-slate-700 text-center col-span-1">
                     <div></div>
                     <button ontouchstart="moveDirection('up')" onmousedown="moveDirection('up')" class="bg-slate-700 hover:bg-slate-600 py-2 rounded text-xs font-bold text-yellow-400">▲</button>
@@ -188,6 +189,10 @@
         let matchChannel = null;
         let isHost = false;
         let gameStarted = false;
+        let isMatchOver = false;
+
+        let myRematchRequested = false;
+        let opRematchRequested = false;
 
         const summonNames = {
             'Modi ji': 'Yogi',
@@ -197,19 +202,11 @@
             'Diddy': '1000 baby oil'
         };
 
-        const charColors = {
-            'Modi ji': 0x38bdf8,
-            'Trump': 0xfacc15,
-            'Putin': 0xef4444,
-            'Kim jong un': 0xa855f7,
-            'Diddy': 0x22c55e
-        };
-
-        // AUTO-LOGIN ON PAGE LOAD IF USERNAME EXISTS IN LOCALSTORAGE
+        // AUTO-LOGIN FROM LOCAL STORAGE
         window.addEventListener('DOMContentLoaded', () => {
-            const savedUsername = localStorage.getItem('tekken_username');
-            if (savedUsername) {
-                document.getElementById('username-input').value = savedUsername;
+            const savedUser = localStorage.getItem('tekken_username');
+            if (savedUser) {
+                document.getElementById('username-input').value = savedUser;
                 registerUser();
             }
         });
@@ -233,8 +230,6 @@
 
                 currentUser = username;
                 currentUserId = data.id;
-
-                // Save username to localStorage so user doesn't have to enter it again
                 localStorage.setItem('tekken_username', username);
 
                 document.getElementById('current-username').textContent = currentUser;
@@ -342,15 +337,14 @@
             activeChallenge = null;
         }
 
-        // --- CHARACTER SELECTION & TWO-WAY SYNCHRONIZED START ---
+        // SELECTION & START HANDSHAKE
         function pickChar(charName) {
             selectedChar = charName;
             document.getElementById('char-grid').classList.add('hidden');
             document.getElementById('waiting-banner').classList.remove('hidden');
 
-            // Send selection multiple times to ensure connection pickup
-            const sendLoop = setInterval(() => {
-                if (gameStarted) { clearInterval(sendLoop); return; }
+            const loop = setInterval(() => {
+                if (gameStarted) { clearInterval(loop); return; }
                 broadcastPVPState('char_selected', { char: selectedChar });
             }, 500);
 
@@ -371,7 +365,7 @@
             }
         }
 
-        // --- REALTIME PVP SYNCHRONIZATION ---
+        // REALTIME BROADCASTING & STATE MACHINE
         function connectP2PRealtime() {
             if (matchChannel) return;
             const matchId = activeChallenge ? activeChallenge.id : 'room_pvp_1';
@@ -385,25 +379,28 @@
                     if (data.sender !== currentUser) {
                         if (data.action === 'char_selected') {
                             opponentChar = data.char;
-                            // Reply back with our character if already picked
-                            if (selectedChar) {
-                                broadcastPVPState('char_selected', { char: selectedChar });
-                            }
+                            if (selectedChar) broadcastPVPState('char_selected', { char: selectedChar });
                             checkBothPlayersReady();
-                        } else if (data.action === 'rematch') {
-                            resetMatchState();
-                        } else {
-                            p2Data.x = data.x;
-                            p2Data.z = data.z;
-                            p2Data.hp = data.hp;
-                            if (data.action === 'punch' || data.action === 'kick') {
-                                animateAttack(p2Mesh, data.action);
-                            }
-                            if (data.action === 'summon') {
-                                triggerSummonMesh(p2Mesh);
+                        } else if (data.action === 'damage_dealt') {
+                            // Apply synchronized damage
+                            if (data.target === currentUser) {
+                                p1Data.hp = Math.max(0, data.newHp);
+                            } else {
+                                p2Data.hp = Math.max(0, data.newHp);
                             }
                             updateHUD();
                             checkMatchOver();
+                        } else if (data.action === 'rematch_request') {
+                            opRematchRequested = true;
+                            document.getElementById('rematch-status').textContent = "Opponent wants a rematch!";
+                            checkBothRematch();
+                        } else if (data.action === 'leave_to_lobby') {
+                            location.reload();
+                        } else {
+                            p2Data.x = data.x;
+                            p2Data.z = data.z;
+                            if (data.action === 'punch' || data.action === 'kick') animateAttack(p2Mesh, data.action);
+                            if (data.action === 'summon') triggerSummonMesh(p2Mesh, opponentChar);
                         }
                     }
                 })
@@ -427,7 +424,7 @@
             });
         }
 
-        // --- THREE.JS 3D TEKKEN ENGINE ---
+        // THREE.JS STYLIZED POLITICIAN 3D ENGINE
         let scene, camera, renderer;
         let p1Mesh, p2Mesh;
         let p1Data = { x: -3, z: 0, hp: 100 };
@@ -437,7 +434,7 @@
             const container = document.getElementById('canvas3d-container');
             container.innerHTML = '';
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
+            scene.background = new THREE.Color(0x070a12);
 
             camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.set(0, 4, 11);
@@ -448,63 +445,115 @@
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambient);
+            // Lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const light = new THREE.DirectionalLight(0xfacc15, 1.2);
+            light.position.set(5, 10, 5);
+            scene.add(light);
 
-            const dirLight = new THREE.DirectionalLight(0xfacc15, 1);
-            dirLight.position.set(5, 10, 5);
-            scene.add(dirLight);
-
-            // Ring
-            const ringGeo = new THREE.CylinderGeometry(8, 8, 0.5, 32);
-            const ringMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
+            // Ring Stage
+            const ring = new THREE.Mesh(
+                new THREE.CylinderGeometry(8, 8, 0.5, 32),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 })
+            );
             ring.position.y = -0.25;
             scene.add(ring);
 
-            const borderGeo = new THREE.TorusGeometry(7.8, 0.1, 16, 100);
-            const borderMat = new THREE.MeshBasicMaterial({ color: 0xeab308 });
-            const border = new THREE.Mesh(borderGeo, borderMat);
-            border.rotation.x = Math.PI / 2;
-            scene.add(border);
+            const ringBorder = new THREE.Mesh(
+                new THREE.TorusGeometry(7.8, 0.1, 16, 100),
+                new THREE.MeshBasicMaterial({ color: 0xeab308 })
+            );
+            ringBorder.rotation.x = Math.PI / 2;
+            scene.add(ringBorder);
 
-            // Construct 3D Characters
-            p1Mesh = create3DFighter(charColors[selectedChar] || 0x38bdf8);
+            // Build Politician Meshes
+            p1Mesh = buildPoliticianMesh(selectedChar);
             p1Mesh.position.set(p1Data.x, 0, p1Data.z);
             scene.add(p1Mesh);
 
-            p2Mesh = create3DFighter(charColors[opponentChar] || 0xef4444);
+            p2Mesh = buildPoliticianMesh(opponentChar);
             p2Mesh.position.set(p2Data.x, 0, p2Data.z);
+            p2Mesh.rotation.y = Math.PI;
             scene.add(p2Mesh);
 
             animateLoop();
         }
 
-        function create3DFighter(colorHex) {
+        // BUILD POLITICIAN MODELS REAL-LIFE LOOK
+        function buildPoliticianMesh(charName) {
             const group = new THREE.Group();
-            const bodyGeo = new THREE.BoxGeometry(0.8, 1.2, 0.5);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.2 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 1.2;
+
+            let suitColor = 0x1e293b;
+            let shirtColor = 0xffffff;
+            let hairColor = 0x334155;
+
+            if (charName === 'Modi ji') {
+                suitColor = 0xf97316; // Saffron Kurta
+                hairColor = 0xffffff; // White Hair & Beard
+            } else if (charName === 'Trump') {
+                suitColor = 0x1e1b4b; // Dark Blue Suit
+                hairColor = 0xfacc15; // Signature Blond Hair
+            } else if (charName === 'Putin') {
+                suitColor = 0x0f172a; // Black Suit
+                hairColor = 0x94a3b8; // Short Shaved Hair
+            } else if (charName === 'Kim jong un') {
+                suitColor = 0x14532d; // Dark Military Tunic
+                hairColor = 0x0f172a;
+            } else if (charName === 'Diddy') {
+                suitColor = 0x475569; // Designer Outfit
+                hairColor = 0x0f172a;
+            }
+
+            // Torso / Suit
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.25, 0.5), new THREE.MeshStandardMaterial({ color: suitColor }));
+            body.position.y = 1.25;
             group.add(body);
 
-            const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xfde047 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 2.1;
+            // Shirt / Tie Detail for Trump / Putin
+            if (charName === 'Trump') {
+                const tie = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.7, 0.05), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
+                tie.position.set(0, 1.3, 0.26);
+                group.add(tie);
+            }
+
+            // Head
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshStandardMaterial({ color: 0xfde047 }));
+            head.position.y = 2.15;
             group.add(head);
 
-            const limbGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.9);
-            const limbMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+            // Hair / Beard Customizations
+            if (charName === 'Modi ji') {
+                // Beard
+                const beard = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.35), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                beard.position.set(0, 2.0, 0.1);
+                group.add(beard);
+                // Saffron Turban accent
+                const turban = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.2, 16), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
+                turban.position.y = 2.4;
+                group.add(turban);
+            } else if (charName === 'Trump') {
+                // Swept Blond Hair Top
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.5), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+                hair.position.set(0, 2.4, 0.05);
+                group.add(hair);
+            } else if (charName === 'Diddy') {
+                // Sunglasses & Chain
+                const glasses = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, 0.1), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+                glasses.position.set(0, 2.2, 0.3);
+                group.add(glasses);
+                const chain = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.03, 8, 16), new THREE.MeshBasicMaterial({ color: 0xfacc15 }));
+                chain.position.set(0, 1.7, 0.2);
+                group.add(chain);
+            }
 
-            const rightArm = new THREE.Mesh(limbGeo, limbMat);
-            rightArm.position.set(0.55, 1.3, 0);
-            rightArm.name = "rightArm";
+            // Arms & Legs
+            const limbMat = new THREE.MeshStandardMaterial({ color: suitColor });
+            const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.9), limbMat);
+            rightArm.position.set(0.58, 1.3, 0); rightArm.name = "rightArm";
             group.add(rightArm);
 
-            const rightLeg = new THREE.Mesh(limbGeo, limbMat);
-            rightLeg.position.set(0.25, 0.45, 0);
-            rightLeg.name = "rightLeg";
+            const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.9), limbMat);
+            rightLeg.position.set(0.25, 0.45, 0); rightLeg.name = "rightLeg";
             group.add(rightLeg);
 
             return group;
@@ -535,17 +584,26 @@
             }
         }
 
-        function triggerSummonMesh(mesh) {
-            const sMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.8, 0), new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true }));
+        function triggerSummonMesh(mesh, charName) {
+            let color = 0xeab308;
+            if (charName === 'Modi ji') color = 0xf97316; // Yogi Saffron
+            if (charName === 'Trump') color = 0xef4444;  // Epstein Red
+            if (charName === 'Putin') color = 0x22c55e;  // Army Camo
+            if (charName === 'Kim jong un') color = 0xd97706; // Red Button Desk
+            if (charName === 'Diddy') color = 0x38bdf8;  // Baby Oil Hydro
+
+            const sMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.9, 0), new THREE.MeshBasicMaterial({ color: color, wireframe: true }));
             sMesh.position.set(mesh.position.x, 2.5, mesh.position.z);
             scene.add(sMesh);
+
             let scale = 1;
             const iv = setInterval(() => { scale += 0.1; sMesh.scale.set(scale, scale, scale); }, 30);
             setTimeout(() => { clearInterval(iv); scene.remove(sMesh); }, 1000);
         }
 
-        // --- GAME CONTROLS & MOVEMENT IN ALL 4 DIRECTIONS ---
+        // MOVEMENT & SYNCHRONIZED ATTACKS
         function moveDirection(dir) {
+            if (isMatchOver) return;
             const speed = 0.4;
             if (dir === 'left') p1Data.x = Math.max(-7, p1Data.x - speed);
             if (dir === 'right') p1Data.x = Math.min(7, p1Data.x + speed);
@@ -555,26 +613,32 @@
         }
 
         function triggerAttack(type) {
+            if (isMatchOver) return;
             animateAttack(p1Mesh, type);
             const dist = Math.hypot(p1Data.x - p2Data.x, p1Data.z - p2Data.z);
             if (dist < 2.2) {
-                const dmg = type === 'punch' ? 12 : 20;
+                const dmg = type === 'punch' ? 15 : 22;
                 p2Data.hp = Math.max(0, p2Data.hp - dmg);
                 updateHUD();
+                broadcastPVPState('damage_dealt', { target: isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username, newHp: p2Data.hp });
                 checkMatchOver();
+            } else {
+                broadcastPVPState(type);
             }
-            broadcastPVPState(type);
         }
 
         function triggerSummon() {
-            triggerSummonMesh(p1Mesh);
+            if (isMatchOver) return;
+            triggerSummonMesh(p1Mesh, selectedChar);
             const dist = Math.hypot(p1Data.x - p2Data.x, p1Data.z - p2Data.z);
             if (dist < 4.0) {
                 p2Data.hp = Math.max(0, p2Data.hp - 35);
                 updateHUD();
+                broadcastPVPState('damage_dealt', { target: isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username, newHp: p2Data.hp });
                 checkMatchOver();
+            } else {
+                broadcastPVPState('summon');
             }
-            broadcastPVPState('summon');
         }
 
         function updateHUD() {
@@ -585,30 +649,43 @@
         }
 
         function checkMatchOver() {
-            if (p1Data.hp <= 0 || p2Data.hp <= 0) {
+            if ((p1Data.hp <= 0 || p2Data.hp <= 0) && !isMatchOver) {
+                isMatchOver = true;
                 const winner = p1Data.hp > 0 ? currentUser : (isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username);
-                document.getElementById('announcer-msg').textContent = `${winner.toUpperCase()} WINS THE MATCH!`;
+                document.getElementById('announcer-msg').textContent = `${winner.toUpperCase()} WINS!`;
+                document.getElementById('rematch-status').textContent = '';
                 document.getElementById('battle-announcer').classList.remove('hidden');
             }
         }
 
-        function resetMatchState() {
-            p1Data = { x: -3, z: 0, hp: 100 };
-            p2Data = { x: 3, z: 0, hp: 100 };
-            updateHUD();
-            document.getElementById('battle-announcer').classList.add('hidden');
+        // REMATCH & LOBBY SYNCHRONIZATION FLOW
+        function requestRematch() {
+            myRematchRequested = true;
+            document.getElementById('rematch-status').textContent = "Waiting for opponent to accept rematch...";
+            document.getElementById('btn-rematch').disabled = true;
+            broadcastPVPState('rematch_request');
+            checkBothRematch();
         }
 
-        function rematch() {
-            resetMatchState();
-            broadcastPVPState('rematch');
+        function checkBothRematch() {
+            if (myRematchRequested && opRematchRequested) {
+                p1Data = { x: -3, z: 0, hp: 100 };
+                p2Data = { x: 3, z: 0, hp: 100 };
+                isMatchOver = false;
+                myRematchRequested = false;
+                opRematchRequested = false;
+                document.getElementById('btn-rematch').disabled = false;
+                updateHUD();
+                document.getElementById('battle-announcer').classList.add('hidden');
+            }
         }
 
-        function returnToLobby() {
+        function requestLobbyExit() {
+            broadcastPVPState('leave_to_lobby');
             location.reload();
         }
 
-        // KEYBOARD CONTROLS FOR ARROW KEYS & ACTIONS
+        // CONTROLS MAPPED TO ARROWS & Z, X, SPACE
         window.addEventListener('keydown', e => {
             if (document.getElementById('screen-battle').classList.contains('hidden')) return;
             const key = e.key.toLowerCase();
