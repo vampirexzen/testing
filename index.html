@@ -37,25 +37,24 @@
       <div class="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto shadow-lg">
         <i class="fa-brands fa-discord text-3xl text-white"></i>
       </div>
-      <h2 class="text-2xl font-bold text-white">Welcome to Discord Clone</h2>
-      <p class="text-sm text-gray-400">Enter a username to join the real-time space or log into your account profile.</p>
+      <h2 class="text-2xl font-bold text-white">Welcome back!</h2>
+      <p class="text-sm text-gray-400">Enter a username to join the real-time workspace.</p>
 
       <div class="text-left space-y-2">
         <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Username</label>
-        <input id="authUsernameInput" type="text" placeholder="e.g. CyberKnight" class="w-full bg-[#1e1f22] text-white p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
+        <input id="authUsernameInput" type="text" placeholder="e.g. CyberKnight" class="w-full bg-[#1e1f22] text-white p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]" onkeydown="if(event.key === 'Enter') initUserSession()">
       </div>
 
-      <button id="joinBtn" onclick="initUserSession()" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition text-white font-semibold py-3 rounded shadow">
-        Enter Discord
+      <div id="authErrorMsg" class="text-xs text-red-400 font-medium text-left hidden"></div>
+
+      <button id="joinBtn" onclick="initUserSession()" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition text-white font-semibold py-3 rounded shadow flex items-center justify-center space-x-2">
+        <span id="joinBtnText">Enter Discord</span>
+        <i id="joinSpinner" class="fa-solid fa-spinner animate-spin hidden"></i>
       </button>
-
-      <div id="sqlModalToggle" class="text-xs text-blue-400 cursor-pointer hover:underline pt-2" onclick="toggleSqlGuide()">
-        Click here to view required Supabase SQL setup code
-      </div>
     </div>
   </div>
 
-  <!-- ==================== SQL SETUP MODAL ==================== -->
+  <!-- SQL Modal Kept for Emergency Reference if needed via JS trigger, hidden from UI -->
   <div id="sqlGuideModal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4">
     <div class="bg-[#2b2d31] w-full max-w-3xl rounded-lg p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
       <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
@@ -64,7 +63,6 @@
       </div>
       <p class="text-xs text-gray-300">Run the following script inside your Supabase project's SQL Editor to enable tables, functions, and real-time support:</p>
       <pre class="bg-[#1e1f22] p-4 rounded text-xs text-green-400 overflow-x-auto flex-1 font-mono select-all border border-[#111214]">
--- 1. Create Profiles Table
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username TEXT NOT NULL,
@@ -73,16 +71,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   UNIQUE(username, tag)
 );
 
--- 2. Create Friends Table
 CREATE TABLE IF NOT EXISTS public.friends (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  friend_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   status TEXT CHECK (status IN ('pending', 'accepted')) DEFAULT 'pending',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Create Messages Table
 CREATE TABLE IF NOT EXISTS public.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -91,13 +87,10 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Realtime for tables
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
       </pre>
-      <button onclick="copySqlCode()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white py-2 px-4 rounded text-xs font-semibold self-end">
-        <i class="fa-regular fa-copy mr-1"></i> Copy SQL Code
-      </button>
     </div>
   </div>
 
@@ -202,9 +195,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
           <!-- Add Friend Panel -->
           <div id="addFriendSection" class="max-w-xl space-y-4">
             <h3 class="text-white font-bold text-base uppercase tracking-wide">Add Friend</h3>
-            <p class="text-xs text-gray-400">You can add friends with their Discord Tag format (e.g. Username#1234).</p>
+            <p class="text-xs text-gray-400">You can add friends by their username (e.g. zed) or full Tag format (e.g. zed#1234).</p>
             <div class="flex items-center bg-[#1e1f22] p-3 rounded-lg border border-[#111214] focus-within:border-[#5865F2]">
-              <input id="friendTagInput" type="text" placeholder="You can add friends with their Username#Tag" class="bg-transparent flex-1 text-sm text-white focus:outline-none">
+              <input id="friendTagInput" type="text" placeholder="Enter username (e.g. zed) or Username#Tag" class="bg-transparent flex-1 text-sm text-white focus:outline-none">
               <button onclick="sendFriendRequest()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-sm font-medium transition">
                 Send Request
               </button>
@@ -353,55 +346,92 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
 
     async function initUserSession() {
       const input = document.getElementById('authUsernameInput').value.trim();
-      if (!input) return alert("Please enter a username.");
+      const errEl = document.getElementById('authErrorMsg');
+      const btnText = document.getElementById('joinBtnText');
+      const spinner = document.getElementById('joinSpinner');
 
-      // Check if existing profile stored in LocalStorage, or create new random tag
-      let storedUser = JSON.parse(localStorage.getItem('discord_user') || 'null');
+      errEl.classList.add('hidden');
+      errEl.innerText = "";
 
-      if (!storedUser || storedUser.username !== input) {
-        const randomTag = Math.floor(1000 + Math.random() * 9000).toString();
-        
-        // Save to Supabase Profiles
-        const { data, error } = await supabaseClient
-          .from('profiles')
-          .insert([{ username: input, tag: randomTag }])
-          .select()
-          .single();
+      if (!input) {
+        errEl.innerText = "Please enter a valid username.";
+        errEl.classList.remove('hidden');
+        return;
+      }
 
-        if (error) {
-          // If already exists, fetch existing
-          const { data: existing } = await supabaseClient
+      // UI Loading state
+      btnText.innerText = "Connecting...";
+      spinner.classList.remove('hidden');
+
+      try {
+        let storedUser = JSON.parse(localStorage.getItem('discord_user') || 'null');
+
+        if (storedUser && storedUser.username === input) {
+          // Verify user existing record
+          const { data: existing, error: fetchErr } = await supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', storedUser.id)
+            .maybeSingle();
+
+          if (!fetchErr && existing) {
+            currentUser = existing;
+          }
+        }
+
+        if (!currentUser) {
+          // Check if username already exists in Supabase
+          const { data: existingUser } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('username', input)
             .limit(1)
-            .single();
+            .maybeSingle();
 
-          if (existing) {
-            currentUser = existing;
+          if (existingUser) {
+            currentUser = existingUser;
           } else {
-            return alert("Database Error: Make sure SQL schema is initialized. Click the guide in modal!");
+            // Generate a unique 4-digit tag
+            const randomTag = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            // Insert profile into database
+            const { data: newProfile, error: insertErr } = await supabaseClient
+              .from('profiles')
+              .insert([{ username: input, tag: randomTag }])
+              .select()
+              .single();
+
+            if (insertErr) {
+              throw insertErr;
+            }
+            currentUser = newProfile;
           }
-        } else {
-          currentUser = data;
         }
+
+        // Store user locally
         localStorage.setItem('discord_user', JSON.stringify(currentUser));
-      } else {
-        currentUser = storedUser;
+
+        // Update Dashboard UI Header
+        document.getElementById('currentUserName').innerText = currentUser.username;
+        document.getElementById('currentUserTag').innerText = `#${currentUser.tag}`;
+        document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
+
+        // Hide Auth Modal
+        document.getElementById('authModal').classList.add('hidden');
+
+        // Load initial friends & listen to subscriptions
+        await loadFriends();
+        setupRealtimeSubscriptions();
+        initAudioVideoDevices();
+
+      } catch (err) {
+        console.error("Auth Exception:", err);
+        errEl.innerText = "Unable to connect. Please make sure database tables exist in Supabase.";
+        errEl.classList.remove('hidden');
+      } finally {
+        btnText.innerText = "Enter Discord";
+        spinner.classList.add('hidden');
       }
-
-      // Update UI Header
-      document.getElementById('currentUserName').innerText = currentUser.username;
-      document.getElementById('currentUserTag').innerText = `#${currentUser.tag}`;
-      document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
-
-      // Hide Auth Modal
-      document.getElementById('authModal').classList.add('hidden');
-
-      // Load initial friends & listen to subscriptions
-      await loadFriends();
-      setupRealtimeSubscriptions();
-      initAudioVideoDevices();
     }
 
     // ==================== REALTIME SUBSCRIPTIONS ====================
@@ -452,28 +482,53 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
     async function loadFriends() {
       if (!currentUser) return;
 
+      // Handle dual column queries cleanly (user_id/friend_id or sender_id/receiver_id)
       const { data, error } = await supabaseClient
         .from('friends')
         .select(`
-          id, status, sender_id, receiver_id,
-          sender:profiles!friends_sender_id_fkey(*),
-          receiver:profiles!friends_receiver_id_fkey(*)
+          id, status, 
+          user_id, friend_id,
+          sender:profiles!user_id(*),
+          receiver:profiles!friend_id(*)
         `)
-        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+        .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
 
-      if (error) return console.error(error);
+      if (error) {
+        // Fallback check if schema uses sender_id / receiver_id
+        const { data: altData, error: altErr } = await supabaseClient
+          .from('friends')
+          .select(`
+            id, status, sender_id, receiver_id,
+            sender:profiles!friends_sender_id_fkey(*),
+            receiver:profiles!friends_receiver_id_fkey(*)
+          `)
+          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
+        if (altErr) return console.error("Load Friends error:", altErr);
+        processFriendsData(altData, true);
+        return;
+      }
+
+      processFriendsData(data, false);
+    }
+
+    function processFriendsData(data, isAltSchema = false) {
       friendsList = [];
       pendingRequests = [];
 
+      if (!data) return;
+
       data.forEach(rel => {
-        const isSender = rel.sender_id === currentUser.id;
+        const myIdCol = isAltSchema ? rel.sender_id : rel.user_id;
+        const isSender = myIdCol === currentUser.id;
         const friendProfile = isSender ? rel.receiver : rel.sender;
 
-        if (rel.status === 'accepted') {
-          friendsList.push(friendProfile);
-        } else if (rel.status === 'pending') {
-          pendingRequests.push({ ...friendProfile, requestId: rel.id, isIncoming: !isSender });
+        if (friendProfile) {
+          if (rel.status === 'accepted') {
+            friendsList.push(friendProfile);
+          } else if (rel.status === 'pending') {
+            pendingRequests.push({ ...friendProfile, requestId: rel.id, isIncoming: !isSender });
+          }
         }
       });
 
@@ -487,23 +542,39 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
       statusEl.innerText = "";
       statusEl.className = "text-xs font-medium min-h-[20px]";
 
-      if (!input.includes('#')) {
-        statusEl.innerText = "Please enter tag format: Username#Tag";
+      if (!input) {
+        statusEl.innerText = "Please enter a username or Username#Tag";
         statusEl.classList.add("text-red-400");
         return;
       }
 
-      const [uname, tag] = input.split('#');
+      let targetProfile = null;
+      let queryError = null;
 
-      const { data: targetProfile, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('username', uname)
-        .eq('tag', tag)
-        .single();
+      if (input.includes('#')) {
+        const [uname, tag] = input.split('#');
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .ilike('username', uname)
+          .eq('tag', tag)
+          .maybeSingle();
 
-      if (error || !targetProfile) {
-        statusEl.innerText = "User not found. Check exact casing and tag number.";
+        targetProfile = data;
+        queryError = error;
+      } else {
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .ilike('username', input)
+          .maybeSingle();
+
+        targetProfile = data;
+        queryError = error;
+      }
+
+      if (queryError || !targetProfile) {
+        statusEl.innerText = "User not found. Check exact username or tag.";
         statusEl.classList.add("text-red-400");
         return;
       }
@@ -528,44 +599,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
         statusEl.innerText = `Success! Friend request sent to ${targetProfile.username}#${targetProfile.tag}`;
         statusEl.classList.add("text-green-400");
         document.getElementById('friendTagInput').value = '';
-        loadFriends();
-      }
-    }
-
-    async function acceptFriendRequest(requestId) {
-      await supabaseClient.from('friends').update({ status: 'accepted' }).eq('id', requestId);
-      loadFriends();
-    }
-
-    // ==================== CHAT & MESSAGING ====================
-
-    function openChat(friend) {
-      activeFriend = friend;
-      document.getElementById('friendsView').classList.add('hidden');
-      document.getElementById('chatView').classList.remove('hidden');
-      document.getElementById('activeChatUser').innerText = `${friend.username}#${friend.tag}`;
-      document.getElementById('messageInput').placeholder = `Message @${friend.username}`;
-
-      loadChatMessages();
-    }
-
-    async function loadChatMessages() {
-      if (!activeFriend) return;
-
-      const container = document.getElementById('messagesContainer');
-      container.innerHTML = `<div class="text-xs text-gray-500 text-center py-4">Loading messages...</div>`;
-
-      const { data: messages } = await supabaseClient
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeFriend.id}),and(sender_id.eq.${activeFriend.id},receiver_id.eq.${currentUser.id})`)
-        .order('created_at', { ascending: true });
-
-      container.innerHTML = "";
-      if (messages && messages.length > 0) {
-        messages.forEach(msg => appendMessage(msg));
-      } else {
-        container.innerHTML = `<div class="text-xs text-gray-500 text-center py-4">This is the start of your direct message history with @${activeFriend.username}.</div>`;
+        await loadFriends();
       }
     }
 
@@ -648,15 +682,11 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
 
       } catch (err) {
         console.error("Media Error:", err);
-        alert("Microphone/Camera permission denied or unavailable.");
         closeCallUI();
       }
     }
 
     async function handleCallOffer(payload) {
-      const accept = confirm(`Incoming call from a user! Accept?`);
-      if (!accept) return;
-
       document.getElementById('activeCallPanel').classList.remove('hidden');
       document.getElementById('callStatusText').innerText = `Connected in Call`;
 
@@ -972,40 +1002,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
       modal.classList.toggle('hidden');
     }
 
-    function copySqlCode() {
-      const sqlText = `
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username TEXT NOT NULL,
-  tag TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(username, tag)
-);
-
-CREATE TABLE IF NOT EXISTS public.friends (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status TEXT CHECK (status IN ('pending', 'accepted')) DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  sender_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  receiver_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
-      `.trim();
-
-      document.execCommand('copy');
-      alert('SQL code copied to clipboard!');
-    }
-
     function escapeHtml(text) {
       return text
         .replace(/&/g, "&amp;")
@@ -1019,7 +1015,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.friends;
     window.onload = function() {
       const stored = localStorage.getItem('discord_user');
       if (stored) {
-        document.getElementById('authUsernameInput').value = JSON.parse(stored).username;
+        try {
+          document.getElementById('authUsernameInput').value = JSON.parse(stored).username;
+        } catch(e){}
       }
     };
   </script>
