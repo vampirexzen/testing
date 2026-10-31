@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supreme Showdown 3D Tekken</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Three.js for 3D Graphics & Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        .arcade-font { font-family: 'Press Start 2P', monospace; }
+        body { background: #05050a; color: #fff; overflow-x: hidden; user-select: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 md:p-4">
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="w-full max-w-5xl bg-slate-950 border-4 border-yellow-500 rounded-xl shadow-2xl p-4 md:p-6 relative overflow-hidden">
+        
+        <!-- HEADER -->
+        <div class="text-center mb-4">
+            <h1 class="arcade-font text-2xl md:text-4xl text-yellow-400 drop-shadow-[0_4px_6px_rgba(234,179,8,0.5)]">SUPREME SHOWDOWN 3D</h1>
+            <p class="arcade-font text-[10px] md:text-xs text-red-400 mt-1">REAL 1V1 MULTIPLAYER ONLINE FIGHTER</p>
+        </div>
+
+        <!-- 1. AUTH / USERNAME LOGIN SCREEN -->
+        <div id="screen-auth" class="space-y-6 text-center py-12">
+            <h2 class="arcade-font text-lg md:text-xl text-cyan-300">ENTER YOUR FIGHTER USERNAME</h2>
+            <div class="flex justify-center gap-3 flex-wrap">
+                <input type="text" id="username-input" placeholder="e.g. TekkenKing99" class="px-4 py-3 bg-slate-900 border-2 border-cyan-500 rounded text-white arcade-font text-sm focus:outline-none focus:border-yellow-400 w-72" maxlength="16">
+                <button type="button" onclick="loginUser()" class="arcade-font bg-yellow-500 hover:bg-yellow-400 text-slate-950 px-6 py-3 rounded font-bold transition transform hover:scale-105 cursor-pointer shadow-lg shadow-yellow-500/30">ENTER LOBBY</button>
+            </div>
+            <p id="auth-error" class="text-red-500 arcade-font text-xs mt-2"></p>
+        </div>
+
+        <!-- 2. LOBBY SCREEN -->
+        <div id="screen-lobby" class="hidden space-y-6">
+            <div class="flex justify-between items-center bg-slate-900 p-4 rounded-lg border border-slate-800 shadow">
+                <div>
+                    <span class="arcade-font text-xs text-slate-400">FIGHTER:</span>
+                    <span id="current-username" class="arcade-font text-yellow-400 text-base md:text-lg ml-2"></span>
+                </div>
+                <button onclick="logoutUser()" class="arcade-font text-xs bg-red-600 hover:bg-red-500 px-4 py-2 rounded transition cursor-pointer">LOGOUT</button>
+            </div>
+
+            <!-- CHALLENGE NOTIFICATION BANNER -->
+            <div id="challenge-notification" class="hidden bg-gradient-to-r from-yellow-600 to-amber-500 text-slate-950 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 animate-bounce shadow-xl">
+                <span id="challenge-text" class="arcade-font text-xs font-bold text-center md:text-left"></span>
+                <div class="space-x-3">
+                    <button onclick="acceptChallenge()" class="arcade-font bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded text-xs cursor-pointer shadow">ACCEPT MATCH</button>
+                    <button onclick="declineChallenge()" class="arcade-font bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded text-xs cursor-pointer shadow">DECLINE</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- ONLINE FIGHTERS LIST -->
+                <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 shadow">
+                    <h3 class="arcade-font text-sm text-cyan-400 mb-3 flex items-center justify-between">
+                        <span>ONLINE CHALLENGERS</span>
+                        <span class="text-xs text-green-400 animate-pulse">● LIVE</span>
+                    </h3>
+                    <div id="players-list" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        <p class="arcade-font text-xs text-slate-500 text-center py-8">Scanning for fighters...</p>
+                    </div>
+                </div>
+
+                <!-- CONTROLS & INFO -->
+                <div class="bg-slate-900 p-4 rounded-lg border border-slate-800 flex flex-col justify-center text-center shadow">
+                    <h3 class="arcade-font text-sm text-yellow-400 mb-3">3D ARENA CONTROLS</h3>
+                    <p class="arcade-font text-[11px] text-slate-300 leading-relaxed space-y-2">
+                        • <span class="text-cyan-400">A / D or Arrow Keys:</span> Move Left / Right<br>
+                        • <span class="text-blue-400">J / Click Punch:</span> Quick 3D Punch<br>
+                        • <span class="text-purple-400">K / Click Kick:</span> Heavy 3D Kick<br>
+                        • <span class="text-amber-400">S / Summon Button:</span> Unleash Summon Special
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. CHARACTER SELECT SCREEN -->
+        <div id="screen-char-select" class="hidden space-y-6 text-center py-6">
+            <h2 class="arcade-font text-xl md:text-2xl text-yellow-400">CHOOSE YOUR LEGENDARY FIGHTER</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                <div onclick="selectCharacter('Modi ji')" class="char-card bg-slate-900 border-2 border-slate-700 hover:border-yellow-400 p-4 rounded-xl cursor-pointer transition transform hover:scale-105 shadow-lg group">
+                    <div class="text-4xl mb-3 group-hover:scale-125 transition">🇮🇳</div>
+                    <div class="arcade-font text-xs font-bold text-yellow-300">Modi ji</div>
+                    <div class="text-[10px] text-cyan-400 mt-2 font-semibold">Summon: Yogi</div>
+                </div>
+                <div onclick="selectCharacter('Trump')" class="char-card bg-slate-900 border-2 border-slate-700 hover:border-yellow-400 p-4 rounded-xl cursor-pointer transition transform hover:scale-105 shadow-lg group">
+                    <div class="text-4xl mb-3 group-hover:scale-125 transition">🇺🇸</div>
+                    <div class="arcade-font text-xs font-bold text-yellow-300">Trump</div>
+                    <div class="text-[10px] text-cyan-400 mt-2 font-semibold">Summon: Epstein</div>
+                </div>
+                <div onclick="selectCharacter('Putin')" class="char-card bg-slate-900 border-2 border-slate-700 hover:border-yellow-400 p-4 rounded-xl cursor-pointer transition transform hover:scale-105 shadow-lg group">
+                    <div class="text-4xl mb-3 group-hover:scale-125 transition">🇷🇺</div>
+                    <div class="arcade-font text-xs font-bold text-yellow-300">Putin</div>
+                    <div class="text-[10px] text-cyan-400 mt-2 font-semibold">Summon: Army</div>
+                </div>
+                <div onclick="selectCharacter('Kim jong un')" class="char-card bg-slate-900 border-2 border-slate-700 hover:border-yellow-400 p-4 rounded-xl cursor-pointer transition transform hover:scale-105 shadow-lg group">
+                    <div class="text-4xl mb-3 group-hover:scale-125 transition">🇰🇵</div>
+                    <div class="arcade-font text-xs font-bold text-yellow-300">Kim jong un</div>
+                    <div class="text-[10px] text-cyan-400 mt-2 font-semibold">Summon: Red button</div>
+                </div>
+                <div onclick="selectCharacter('Diddy')" class="char-card bg-slate-900 border-2 border-slate-700 hover:border-yellow-400 p-4 rounded-xl cursor-pointer transition transform hover:scale-105 shadow-lg group">
+                    <div class="text-4xl mb-3 group-hover:scale-125 transition">🛢️</div>
+                    <div class="arcade-font text-xs font-bold text-yellow-300">Diddy</div>
+                    <div class="text-[10px] text-cyan-400 mt-2 font-semibold">Summon: 1000 baby oil</div>
+                </div>
+            </div>
+            <p class="arcade-font text-xs text-slate-400 animate-pulse mt-4" id="waiting-opponent-text">Waiting for opponent to pick fighter...</p>
+        </div>
+
+        <!-- 4. 3D BATTLE ARENA SCREEN -->
+        <div id="screen-battle" class="hidden space-y-4">
+            <!-- HUD -->
+            <div class="flex justify-between items-center bg-slate-900 p-4 rounded-lg border border-slate-800 shadow">
+                <div class="w-5/12">
+                    <div class="flex justify-between text-xs arcade-font mb-1">
+                        <span id="p1-name" class="text-cyan-400 truncate">P1</span>
+                        <span id="p1-hp-text" class="text-green-400">100/100</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700">
+                        <div id="p1-hp" class="bg-gradient-to-r from-green-600 to-green-400 h-full w-full transition-all duration-200"></div>
+                    </div>
+                </div>
+                <div class="arcade-font text-yellow-400 text-sm md:text-lg font-bold px-2">VS</div>
+                <div class="w-5/12">
+                    <div class="flex justify-between text-xs arcade-font mb-1">
+                        <span id="p2-hp-text" class="text-red-400">100/100</span>
+                        <span id="p2-name" class="text-red-400 truncate">P2</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700 flex justify-end">
+                        <div id="p2-hp" class="bg-gradient-to-r from-red-600 to-red-400 h-full w-full transition-all duration-200"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- THREE.JS 3D CANVAS WRAPPER -->
+            <div class="relative w-full h-[400px] md:h-[460px] bg-black border-4 border-yellow-500 rounded-xl overflow-hidden shadow-2xl">
+                <div id="canvas-container" class="w-full h-full"></div>
+                <!-- ROUND ANNOUNCER OVERLAY -->
+                <div id="battle-announcer" class="absolute inset-0 flex flex-col items-center justify-center arcade-font text-2xl md:text-3xl text-yellow-300 bg-black/85 hidden z-20">
+                    <span id="announcer-text" class="mb-4 drop-shadow-[0_5px_15px_rgba(234,179,8,0.8)]">FIGHT!</span>
+                    <button onclick="returnToLobby()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 px-6 py-3 text-xs rounded-lg font-bold cursor-pointer transition shadow-xl">RETURN TO LOBBY</button>
+                </div>
+            </div>
+
+            <!-- FIGHT CONTROLS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button onclick="executeAttack('punch')" class="arcade-font bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-xs font-bold cursor-pointer transition shadow-lg">PUNCH (J)</button>
+                <button onclick="executeAttack('kick')" class="arcade-font bg-purple-600 hover:bg-purple-500 py-3 rounded-lg text-xs font-bold cursor-pointer transition shadow-lg">KICK (K)</button>
+                <button onclick="executeSummon()" id="summon-btn" class="arcade-font bg-amber-600 hover:bg-amber-500 py-3 rounded-lg text-xs font-bold animate-bounce cursor-pointer transition shadow-lg">SUMMON (S)</button>
+                <button onclick="returnToLobby()" class="arcade-font bg-slate-800 hover:bg-slate-700 py-3 rounded-lg text-xs font-bold cursor-pointer transition shadow-lg">QUIT</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        const SUPABASE_URL = 'https://itywnwlficewuftkrfok.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0eXdud2xmaWNld3VmdGtyZm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzNzIxNTYsImV4cCI6MjEwODk0ODE1Nn0.C_Pfyg86NwJeTcEqU5-4j95EBAfpP9xjjPqCP8BDA5I';
+
+        let supabaseClient = null;
+        try {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch(e) {
+            console.warn('Supabase initialization warning:', e);
+        }
+
+        let currentUser = null;
+        let currentProfileId = null;
+        let currentStatusChannel = null;
+        let activeChallenge = null;
+        let matchChannel = null;
+        let isHost = false;
+
+        let selectedChar = null;
+        let opponentName = 'Opponent';
+        let opponentChar = 'Modi ji';
+
+        // Summon Mapping
+        const summonNames = {
+            'Modi ji': 'Yogi',
+            'Trump': 'Epstein',
+            'Putin': 'Army',
+            'Kim jong un': 'Red button',
+            'Diddy': '1000 baby oil'
+        };
+
+        // --- AUTHENTICATION & LOBBY ---
+        async function loginUser() {
+            const input = document.getElementById('username-input');
+            const errorEl = document.getElementById('auth-error');
+            const username = input.value.trim();
+
+            if (!username) {
+                errorEl.textContent = 'Please enter a valid username!';
+                return;
+            }
+            errorEl.textContent = '';
+            currentUser = username;
+
+            if (supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('profiles')
+                        .upsert({ username: username, status: 'online' }, { onConflict: 'username' })
+                        .select()
+                        .single();
+                    if (!error && data) {
+                        currentProfileId = data.id;
+                    }
+                } catch(e) {
+                    console.log('Supabase profile sync notice:', e);
+                }
+            }
+
+            if (!currentProfileId) {
+                currentProfileId = 'usr_' + Math.random().toString(36).substring(2, 9);
+            }
+
+            localStorage.setItem('arcade_user', currentUser);
+            localStorage.setItem('arcade_id', currentProfileId);
+
+            document.getElementById('current-username').textContent = currentUser;
+            document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.remove('hidden');
+
+            initLobbySubscriptions();
+        }
+
+        function logoutUser() {
+            if (supabaseClient && currentProfileId) {
+                supabaseClient.from('profiles').update({ status: 'offline' }).eq('id', currentProfileId);
+            }
+            localStorage.clear();
+            location.reload();
+        }
+
+        // --- REALTIME LOBBY & CHALLENGES ---
+        function initLobbySubscriptions() {
+            fetchOnlinePlayers();
+
+            if (!supabaseClient) return;
+
+            // Subscribe to online players
+            currentStatusChannel = supabaseClient.channel('public:profiles')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                    fetchOnlinePlayers();
+                })
+                .subscribe();
+
+            // Subscribe to incoming challenge invites
+            supabaseClient.channel('public:challenges')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'challenges' }, payload => {
+                    const ch = payload.new;
+                    if (ch.challenged_id === currentProfileId && ch.status === 'pending') {
+                        activeChallenge = ch;
+                        document.getElementById('challenge-text').textContent = `${ch.challenger_username} challenges you to a 3D Tekken match!`;
+                        document.getElementById('challenge-notification').classList.remove('hidden');
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'challenges' }, payload => {
+                    const ch = payload.new;
+                    if (ch.challenger_id === currentProfileId && ch.id === (activeChallenge ? activeChallenge.id : '')) {
+                        if (ch.status === 'accepted') {
+                            activeChallenge = ch;
+                            isHost = true;
+                            opponentName = ch.challenged_username;
+                            document.getElementById('screen-lobby').classList.add('hidden');
+                            document.getElementById('screen-char-select').classList.remove('hidden');
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        async function fetchOnlinePlayers() {
+            if (!supabaseClient) {
+                renderMockPlayers();
+                return;
+            }
+            try {
+                const { data, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('status', 'online')
+                    .neq('id', currentProfileId);
+
+                const listEl = document.getElementById('players-list');
+                listEl.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    listEl.innerHTML = '<p class="arcade-font text-xs text-slate-500 text-center py-6">No online fighters found. Invite friends!</p>';
+                    return;
+                }
+
+                data.forEach(player => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800';
+                    div.innerHTML = `
+                        <span class="arcade-font text-xs text-yellow-300">${player.username}</span>
+                        <button onclick="sendChallenge('${player.id}', '${player.username}')" class="arcade-font text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded cursor-pointer transition shadow">CHALLENGE</button>
+                    `;
+                    listEl.appendChild(div);
+                });
+            } catch(e) {
+                renderMockPlayers();
+            }
+        }
+
+        function renderMockPlayers() {
+            const listEl = document.getElementById('players-list');
+            listEl.innerHTML = `
+                <div class="flex justify-between items-center bg-slate-950 p-3 rounded-lg border border-slate-800">
+                    <span class="arcade-font text-xs text-yellow-300">AI_Challenger_Pro</span>
+                    <button onclick="startBotMatch('AI_Challenger_Pro')" class="arcade-font text-xs bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded cursor-pointer">CHALLENGE</button>
+                </div>
+            `;
+        }
+
+        async function sendChallenge(targetId, targetUsername) {
+            opponentName = targetUsername;
+            isHost = true;
+            if (supabaseClient) {
+                const { data, error } = await supabaseClient
+                    .from('challenges')
+                    .insert({
+                        challenger_id: currentProfileId,
+                        challenger_username: currentUser,
+                        challenged_id: targetId,
+                        challenged_username: targetUsername,
+                        status: 'pending'
+                    })
+                    .select()
+                    .single();
+
+                if (error) {
+                    alert('Error sending challenge: ' + error.message);
+                    return;
+                }
+                activeChallenge = data;
+            }
+            alert(`Challenge sent to ${targetUsername}! Waiting for acceptance...`);
+        }
+
+        async function acceptChallenge() {
+            if (!activeChallenge) return;
+            isHost = false;
+            opponentName = activeChallenge.challenger_username;
+
+            if (supabaseClient) {
+                await supabaseClient
+                    .from('challenges')
+                    .update({ status: 'accepted' })
+                    .eq('id', activeChallenge.id);
+            }
+
+            document.getElementById('challenge-notification').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-char-select').classList.remove('hidden');
+        }
+
+        function declineChallenge() {
+            if (activeChallenge && supabaseClient) {
+                supabaseClient.from('challenges').update({ status: 'declined' }).eq('id', activeChallenge.id);
+            }
+            activeChallenge = null;
+            document.getElementById('challenge-notification').classList.add('hidden');
+        }
+
+        function startBotMatch(botName) {
+            opponentName = botName;
+            isHost = true;
+            activeChallenge = { id: 'bot_match_' + Date.now() };
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-char-select').classList.remove('hidden');
+        }
+
+        // --- CHARACTER SELECTION & MATCH START ---
+        function selectCharacter(charName) {
+            selectedChar = charName;
+            document.getElementById('screen-char-select').classList.add('hidden');
+            document.getElementById('screen-battle').classList.remove('hidden');
+
+            document.getElementById('p1-name').textContent = `${currentUser} (${selectedChar})`;
+            document.getElementById('p2-name').textContent = opponentName;
+            document.getElementById('summon-btn').textContent = `SUMMON: ${summonNames[selectedChar].toUpperCase()}`;
+
+            initMatchRealtime();
+            initThreeJSGame();
+        }
+
+        // --- THREE.JS 3D FIGHTING ENGINE ---
+        let scene, camera, renderer, fighterP1, fighterP2, lights = [];
+        let gameActive = true;
+        let p1HP = 100;
+        let p2HP = 100;
+
+        function initThreeJSGame() {
+            const container = document.getElementById('canvas-container');
+            container.innerHTML = '';
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a16);
+            scene.fog = new THREE.FogExp2(0x0a0a16, 0.015);
+
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 5, 18);
+            camera.lookAt(0, 1.5, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffea75, 1.2);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const neonLight1 = new THREE.PointLight(0x00f0ff, 2, 30);
+            neonLight1.position.set(-10, 5, 0);
+            scene.add(neonLight1);
+
+            const neonLight2 = new THREE.PointLight(0xff0055, 2, 30);
+            neonLight2.position.set(10, 5, 0);
+            scene.add(neonLight2);
+
+            // 3D Arena Stage Floor (Tekken style grid ring)
+            const floorGeo = new THREE.CylinderGeometry(10, 10, 0.6, 32);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e1e2f, roughness: 0.3, metalness: 0.8 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.y = -0.3;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Ring glowing boundary grid ring
+            const ringGeo = new THREE.RingGeometry(9.5, 9.8, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = Math.PI / 2;
+            ringMesh.position.y = 0.01;
+            scene.add(ringMesh);
+
+            // Build 3D Tekken-style Blocky Fighter Characters
+            fighterP1 = createFighterMesh(0x38bdf8); // Cyan P1
+            fighterP1.position.set(-3.5, 0, 0);
+            scene.add(fighterP1);
+
+            fighterP2 = createFighterMesh(0xf87171); // Red P2
+            fighterP2.position.set(3.5, 0, 0);
+            scene.add(fighterP2);
+
+            window.addEventListener('resize', onWindowResize);
+            animateGameLoop();
+        }
+
+        function createFighterMesh(baseColor) {
+            const group = new THREE.Group();
+
+            const mat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.4, metalness: 0.3 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffdbac, roughness: 0.5 });
+
+            // Torso
+            const torsoGeo = new THREE.BoxGeometry(1.2, 1.6, 0.7);
+            const torso = new THREE.Mesh(torsoGeo, mat);
+            torso.position.y = 1.6;
+            torso.castShadow = true;
+            group.add(torso);
+
+            // Head
+            const headGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 2.7;
+            head.castShadow = true;
+            group.add(head);
+
+            // Arms
+            const armGeo = new THREE.BoxGeometry(0.4, 1.4, 0.4);
+            
+            const leftArm = new THREE.Mesh(armGeo, mat);
+            leftArm.position.set(-0.9, 1.6, 0);
+            leftArm.castShadow = true;
+            group.leftArm = leftArm;
+            group.add(leftArm);
+
+            const rightArm = new THREE.Mesh(armGeo, mat);
+            rightArm.position.set(0.9, 1.6, 0);
+            rightArm.castShadow = true;
+            group.rightArm = rightArm;
+            group.add(rightArm);
+
+            // Legs
+            const legGeo = new THREE.BoxGeometry(0.5, 1.5, 0.5);
+            
+            const leftLeg = new THREE.Mesh(legGeo, mat);
+            leftLeg.position.set(-0.35, 0.75, 0);
+            leftLeg.castShadow = true;
+            group.leftLeg = leftLeg;
+            group.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeo, mat);
+            rightLeg.position.set(0.35, 0.75, 0);
+            rightLeg.castShadow = true;
+            group.rightLeg = rightLeg;
+            group.add(rightLeg);
+
+            group.isAnimating = false;
+            group.animTimer = 0;
+            return group;
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            if (!container || !renderer) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // --- GAME ACTIONS & SYNCHRONIZATION ---
+        function executeAttack(type) {
+            if (!gameActive) return;
+
+            // Trigger P1 3D punch/kick animation
+            fighterP1.isAnimating = true;
+            fighterP1.animType = type;
+            fighterP1.animTimer = 0;
+
+            if (Math.abs(fighterP1.position.x - fighterP2.position.x) < 4.5) {
+                const damage = type === 'punch' ? 12 : 20;
+                p2HP = Math.max(0, p2HP - damage);
+                updateHUDDisplay();
+                checkMatchWin();
+            }
+
+            broadcastMatchAction(type, fighterP1.position.x, p1HP, p2HP);
+        }
+
+        function executeSummon() {
+            if (!gameActive) return;
+
+            fighterP1.isAnimating = true;
+            fighterP1.animType = 'summon';
+            fighterP1.animTimer = 0;
+
+            p2HP = Math.max(0, p2HP - 35);
+            updateHUDDisplay();
+            checkMatchWin();
+
+            // Trigger special summon 3D particle effect / visual flash
+            triggerSummonVisualEffect(fighterP1);
+
+            broadcastMatchAction('summon', fighterP1.position.x, p1HP, p2HP);
+        }
+
+        function triggerSummonVisualEffect(fighter) {
+            const sphereGeo = new THREE.SphereGeometry(1.8, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, wireframe: true, transparent: true, opacity: 0.8 });
+            const summonAura = new THREE.Mesh(sphereGeo, sphereMat);
+            summonAura.position.copy(fighter.position);
+            summonAura.position.y += 1.5;
+            scene.add(summonAura);
+
+            let scaleTimer = 0;
+            const expandInterval = setInterval(() => {
+                scaleTimer += 0.1;
+                summonAura.scale.addScalar(0.15);
+                summonAura.material.opacity -= 0.08;
+                if (scaleTimer >= 1.2) {
+                    clearInterval(expandInterval);
+                    scene.remove(summonAura);
+                }
+            }, 30);
+        }
+
+        function updateHUDDisplay() {
+            document.getElementById('p1-hp').style.width = p1HP + '%';
+            document.getElementById('p1-hp-text').textContent = `${p1HP}/100`;
+            document.getElementById('p2-hp').style.width = p2HP + '%';
+            document.getElementById('p2-hp-text').textContent = `${p2HP}/100`;
+        }
+
+        function checkMatchWin() {
+            if (p1HP <= 0 || p2HP <= 0) {
+                gameActive = false;
+                const winner = p1HP > 0 ? currentUser : opponentName;
+                document.getElementById('announcer-text').textContent = `${winner.toUpperCase()} WINS!`;
+                document.getElementById('battle-announcer').classList.remove('hidden');
+            }
+        }
+
+        function returnToLobby() {
+            location.reload();
+        }
+
+        // --- REALTIME MULTIPLAYER SYNC ---
+        function initMatchRealtime() {
+            const matchId = activeChallenge ? activeChallenge.id : 'practice_match_' + Date.now();
+            matchChannel = supabaseClient ? supabaseClient.channel('match_room_' + matchId) : null;
+
+            if (matchChannel) {
+                matchChannel
+                    .on('broadcast', { event: 'player_action' }, payload => {
+                        const data = payload.payload;
+                        if (data.sender !== currentUser) {
+                            fighterP2.position.x = -data.x; // Mirror x position for opponent view
+                            p1HP = data.p2HP; // Swap P1/P2 perspectives
+                            p2HP = data.p1HP;
+                            updateHUDDisplay();
+                            checkMatchWin();
+
+                            if (data.action === 'punch' || data.action === 'kick' || data.action === 'summon') {
+                                fighterP2.isAnimating = true;
+                                fighterP2.animType = data.action;
+                                fighterP2.animTimer = 0;
+                                if (data.action === 'summon') triggerSummonVisualEffect(fighterP2);
+                            }
+                        }
+                    })
+                    .subscribe();
+            } else {
+                // Start AI Opponent loop if offline/simulation
+                startBotOpponentAI();
+            }
+        }
+
+        function broadcastMatchAction(action, posX, myHP, oppHP) {
+            if (!matchChannel) return;
+            matchChannel.send({
+                type: 'broadcast',
+                event: 'player_action',
+                payload: {
+                    sender: currentUser,
+                    action: action,
+                    x: posX,
+                    p1HP: myHP,
+                    p2HP: oppHP
+                }
+            });
+        }
+
+        function startBotOpponentAI() {
+            setInterval(() => {
+                if (!gameActive) return;
+                // AI moves toward player & attacks
+                if (fighterP2.position.x > fighterP1.position.x + 2.5) {
+                    fighterP2.position.x -= 0.15;
+                } else if (fighterP2.position.x < fighterP1.position.x - 2.5) {
+                    fighterP2.position.x += 0.15;
+                } else {
+                    if (Math.random() > 0.6) {
+                        fighterP2.isAnimating = true;
+                        fighterP2.animType = Math.random() > 0.5 ? 'punch' : 'kick';
+                        fighterP2.animTimer = 0;
+                        p1HP = Math.max(0, p1HP - 10);
+                        updateHUDDisplay();
+                        checkMatchWin();
+                    }
+                }
+            }, 1200);
+        }
+
+        // --- KEYBOARD CONTROLS ---
+        window.addEventListener('keydown', e => {
+            if (document.getElementById('screen-battle').classList.contains('hidden') || !gameActive) return;
+
+            const speed = 0.5;
+            if (e.key === 'a' || e.key === 'ArrowLeft') {
+                fighterP1.position.x = Math.max(-8, fighterP1.position.x - speed);
+                broadcastMatchAction('move', fighterP1.position.x, p1HP, p2HP);
+            } else if (e.key === 'd' || e.key === 'ArrowRight') {
+                fighterP1.position.x = Math.min(8, fighterP1.position.x + speed);
+                broadcastMatchAction('move', fighterP1.position.x, p1HP, p2HP);
+            } else if (e.key === 'j' || e.key === 'J') {
+                executeAttack('punch');
+            } else if (e.key === 'k' || e.key === 'K') {
+                executeAttack('kick');
+            } else if (e.key === 's' || e.key === 'S') {
+                executeSummon();
+            }
+        });
+
+        // --- ANIMATION RENDER LOOP ---
+        function animateGameLoop() {
+            requestAnimationFrame(animateGameLoop);
+
+            // Animate Fighter 1 attack/summon motions
+            if (fighterP1 && fighterP1.isAnimating) {
+                fighterP1.animTimer += 0.15;
+                if (fighterP1.animType === 'punch') {
+                    fighterP1.rightArm.rotation.x = Math.sin(fighterP1.animTimer * Math.PI) * -1.5;
+                } else if (fighterP1.animType === 'kick') {
+                    fighterP1.rightLeg.rotation.x = Math.sin(fighterP1.animTimer * Math.PI) * 1.5;
+                } else if (fighterP1.animType === 'summon') {
+                    fighterP1.rotation.y += 0.2;
+                }
+
+                if (fighterP1.animTimer >= 1.0) {
+                    fighterP1.isAnimating = false;
+                    fighterP1.animTimer = 0;
+                    fighterP1.rightArm.rotation.x = 0;
+                    fighterP1.rightLeg.rotation.x = 0;
+                    fighterP1.rotation.y = 0;
+                }
+            }
+
+            // Animate Fighter 2 attack/summon motions
+            if (fighterP2 && fighterP2.isAnimating) {
+                fighterP2.animTimer += 0.15;
+                if (fighterP2.animType === 'punch') {
+                    fighterP2.rightArm.rotation.x = Math.sin(fighterP2.animTimer * Math.PI) * -1.5;
+                } else if (fighterP2.animType === 'kick') {
+                    fighterP2.rightLeg.rotation.x = Math.sin(fighterP2.animTimer * Math.PI) * 1.5;
+                } else if (fighterP2.animType === 'summon') {
+                    fighterP2.rotation.y += 0.2;
+                }
+
+                if (fighterP2.animTimer >= 1.0) {
+                    fighterP2.isAnimating = false;
+                    fighterP2.animTimer = 0;
+                    fighterP2.rightArm.rotation.x = 0;
+                    fighterP2.rightLeg.rotation.x = 0;
+                    fighterP2.rotation.y = 0;
+                }
+            }
+
+            // Subtle idle breathing animation
+            const time = Date.now() * 0.003;
+            if (fighterP1) fighterP1.position.y = Math.sin(time) * 0.05;
+            if (fighterP2) fighterP2.position.y = Math.cos(time) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
