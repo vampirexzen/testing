@@ -187,6 +187,7 @@
         let opponentChar = null;
         let matchChannel = null;
         let isHost = false;
+        let gameStarted = false;
 
         const summonNames = {
             'Modi ji': 'Yogi',
@@ -203,6 +204,15 @@
             'Kim jong un': 0xa855f7,
             'Diddy': 0x22c55e
         };
+
+        // AUTO-LOGIN ON PAGE LOAD IF USERNAME EXISTS IN LOCALSTORAGE
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUsername = localStorage.getItem('tekken_username');
+            if (savedUsername) {
+                document.getElementById('username-input').value = savedUsername;
+                registerUser();
+            }
+        });
 
         async function registerUser() {
             const username = document.getElementById('username-input').value.trim();
@@ -224,6 +234,9 @@
                 currentUser = username;
                 currentUserId = data.id;
 
+                // Save username to localStorage so user doesn't have to enter it again
+                localStorage.setItem('tekken_username', username);
+
                 document.getElementById('current-username').textContent = currentUser;
                 document.getElementById('screen-auth').classList.add('hidden');
                 document.getElementById('screen-lobby').classList.remove('hidden');
@@ -239,6 +252,7 @@
             if (currentUserId) {
                 supabaseClient.from('profiles').update({ status: 'offline' }).eq('id', currentUserId);
             }
+            localStorage.removeItem('tekken_username');
             location.reload();
         }
 
@@ -257,6 +271,7 @@
                     } else if (ch.challenger_id === currentUserId && ch.status === 'accepted') {
                         activeChallenge = ch;
                         isHost = true;
+                        connectP2PRealtime();
                         document.getElementById('screen-lobby').classList.add('hidden');
                         document.getElementById('screen-char-select').classList.remove('hidden');
                     }
@@ -315,6 +330,7 @@
             await supabaseClient.from('challenges').update({ status: 'accepted' }).eq('id', activeChallenge.id);
             document.getElementById('challenge-modal').classList.add('hidden');
             isHost = false;
+            connectP2PRealtime();
             document.getElementById('screen-lobby').classList.add('hidden');
             document.getElementById('screen-char-select').classList.remove('hidden');
         }
@@ -326,23 +342,29 @@
             activeChallenge = null;
         }
 
-        // --- CHARACTER SELECTION & SYNCHRONIZED SPAWN ---
+        // --- CHARACTER SELECTION & TWO-WAY SYNCHRONIZED START ---
         function pickChar(charName) {
             selectedChar = charName;
             document.getElementById('char-grid').classList.add('hidden');
             document.getElementById('waiting-banner').classList.remove('hidden');
 
-            connectP2PRealtime();
-            broadcastPVPState('char_selected', { char: selectedChar });
+            // Send selection multiple times to ensure connection pickup
+            const sendLoop = setInterval(() => {
+                if (gameStarted) { clearInterval(sendLoop); return; }
+                broadcastPVPState('char_selected', { char: selectedChar });
+            }, 500);
+
+            checkBothPlayersReady();
         }
 
         function checkBothPlayersReady() {
-            if (selectedChar && opponentChar) {
+            if (selectedChar && opponentChar && !gameStarted) {
+                gameStarted = true;
                 document.getElementById('screen-char-select').classList.add('hidden');
                 document.getElementById('screen-battle').classList.remove('hidden');
 
                 document.getElementById('hud-p1-name').textContent = `${currentUser} (${selectedChar})`;
-                document.getElementById('hud-p2-name').textContent = isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username;
+                document.getElementById('hud-p2-name').textContent = `${isHost ? activeChallenge.challenged_username : activeChallenge.challenger_username} (${opponentChar})`;
                 document.getElementById('btn-summon').textContent = `SUMMON: ${summonNames[selectedChar].toUpperCase()}`;
 
                 init3DArena();
@@ -353,7 +375,9 @@
         function connectP2PRealtime() {
             if (matchChannel) return;
             const matchId = activeChallenge ? activeChallenge.id : 'room_pvp_1';
-            matchChannel = supabaseClient.channel('match_' + matchId);
+            matchChannel = supabaseClient.channel('match_' + matchId, {
+                config: { broadcast: { self: false } }
+            });
 
             matchChannel
                 .on('broadcast', { event: 'pvp_action' }, payload => {
@@ -361,7 +385,13 @@
                     if (data.sender !== currentUser) {
                         if (data.action === 'char_selected') {
                             opponentChar = data.char;
+                            // Reply back with our character if already picked
+                            if (selectedChar) {
+                                broadcastPVPState('char_selected', { char: selectedChar });
+                            }
                             checkBothPlayersReady();
+                        } else if (data.action === 'rematch') {
+                            resetMatchState();
                         } else {
                             p2Data.x = data.x;
                             p2Data.z = data.z;
@@ -562,11 +592,15 @@
             }
         }
 
-        function rematch() {
+        function resetMatchState() {
             p1Data = { x: -3, z: 0, hp: 100 };
             p2Data = { x: 3, z: 0, hp: 100 };
             updateHUD();
             document.getElementById('battle-announcer').classList.add('hidden');
+        }
+
+        function rematch() {
+            resetMatchState();
             broadcastPVPState('rematch');
         }
 
