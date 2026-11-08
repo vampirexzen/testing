@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Puzzle Bobble Online - 4 Player Arcade Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bubble Arena - Multiplayer Arcade</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Client -->
@@ -51,6 +51,14 @@
             animation: shake 0.3s ease-in-out;
         }
 
+        body[data-theme="sunset"] { background: radial-gradient(circle at top, #492345, #130d20 70%); }
+        body[data-theme="mint"] { background: radial-gradient(circle at top, #164b45, #061b1b 70%); }
+        .arena-buddy { width:32px;height:32px;position:relative;border-radius:45%;background:linear-gradient(145deg,#fff1a3,#ffad45);box-shadow:inset -5px -5px #e9843d,0 4px 12px #0008;animation:buddyHop 1.15s ease-in-out infinite; }
+        .arena-buddy:before,.arena-buddy:after { content:"";position:absolute;top:11px;width:4px;height:6px;border-radius:50%;background:#1e293b; }
+        .arena-buddy:before { left:8px; }.arena-buddy:after { right:8px; }
+        .arena-buddy i { position:absolute;left:12px;top:20px;width:8px;height:4px;border-bottom:2px solid #bb4d5c;border-radius:50%; }
+        @keyframes buddyHop { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        input[type=range] { accent-color:#22d3ee; }
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #020617; }
@@ -113,11 +121,19 @@
                 <label class="block text-[10px] font-arcade text-slate-300 mb-2">YOUR NICKNAME</label>
                 <div class="relative">
                     <i class="fa-solid fa-gamepad absolute left-4 top-3.5 text-slate-500"></i>
-                    <input type="text" id="nicknameInput" maxlength="10" placeholder="Player1" 
+                    <input type="text" id="nicknameInput" maxlength="24" placeholder="Player1" 
                            class="w-full bg-slate-950/80 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-base font-bold text-yellow-300 focus:outline-none focus:border-cyan-500 transition">
                 </div>
             </div>
 
+            <div class="mb-4">
+                <label class="block text-[10px] font-arcade text-slate-300 mb-2">MATCH FORMAT</label>
+                <select id="gameMode" onchange="updateRoomOptions()" class="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-3 py-3 text-sm text-white">
+                    <option value="ffa">Free for all · 2 to 8 players (including 1 vs 1)</option><option value="teams_2v2">Teams · 2 vs 2</option><option value="teams_4v4">Teams · 4 vs 4</option><option value="solo_vs_all">Solo vs all · up to 8</option>
+                </select>
+                <div id="capacityWrap" class="mt-3 text-xs text-slate-400">Room size: <strong id="capacityValue" class="text-yellow-300">8</strong><input id="roomCapacity" type="range" min="2" max="8" value="8" class="w-full mt-2" oninput="updateCapacityLabel()"></div>
+            </div>
+            <div class="flex items-center justify-between mb-4 text-[10px] text-slate-400"><span>ARENA THEME</span><select id="themeSelect" onchange="setTheme(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1"><option value="neon">Neon Night</option><option value="sunset">Sunset</option><option value="mint">Mint Galaxy</option></select></div>
             <!-- Action Buttons -->
             <div class="space-y-4">
                 <button onclick="createRoom()" class="arcade-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-arcade text-xs py-4 rounded-xl flex items-center justify-center gap-2">
@@ -158,9 +174,10 @@
 
                     <h3 class="font-arcade text-xs text-slate-300 mb-3 flex justify-between">
                         <span>PLAYERS JOINED</span>
-                        <span id="playerCount" class="text-cyan-400">1/4</span>
+                        <span id="playerCount" class="text-cyan-400">1/8</span>
                     </h3>
 
+                    <p id="roomFormatText" class="text-[10px] text-slate-400 mb-3"></p>
                     <!-- Player Cards Grid -->
                     <div id="playerList" class="grid grid-cols-1 gap-2.5 mb-4"></div>
                 </div>
@@ -244,8 +261,9 @@
                         <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center p-6 text-center z-40">
                             <h2 id="gameOverTitle" class="font-arcade text-xl sm:text-2xl text-red-500 mb-2">ELIMINATED</h2>
                             <p id="gameOverSub" class="text-xs text-slate-300 mb-6">Bubbles overflowed the bottom line!</p>
+                            <button id="spectateButton" onclick="startSpectating()" class="arcade-btn bg-pink-600 hover:bg-pink-500 text-white font-arcade text-[10px] py-3 px-5 rounded-xl mb-2">SPECTATE MATCH</button>
                             <button onclick="returnToLobby()" class="arcade-btn bg-cyan-600 hover:bg-cyan-500 text-white font-arcade text-xs py-3 px-6 rounded-xl">
-                                RETURN TO LOBBY
+                                RETURN TO ROOM
                             </button>
                         </div>
                     </div>
@@ -265,6 +283,7 @@
                             FIRE
                         </button>
                     </div>
+                    <div class="flex items-center justify-center gap-2 mt-2 text-[10px] text-slate-400"><div class="arena-buddy"><i></i></div><span>Your bubble buddy cheers you on</span></div>
 
                 </div>
 
@@ -326,8 +345,14 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Player Session
-        const playerId = 'p_' + Math.random().toString(36).substring(2, 9);
-        let myNickname = "";
+        const playerId = localStorage.getItem("bubbleArenaPlayerId") || ("p_" + (crypto.randomUUID ? crypto.randomUUID().replace(/-/g,"") : Math.random().toString(36).slice(2) + Date.now()));
+        localStorage.setItem("bubbleArenaPlayerId", playerId);
+        let myNickname = localStorage.getItem("bubbleArenaNickname") || "";
+        let roomMode = "ffa";
+        let roomMaxPlayers = 8;
+        let spectatingId = null;
+        let matchFinished = false;
+        const remotePlayerStates = Object.create(null);
         let currentRoomCode = null;
         let isHost = false;
         let roomChannel = null;
@@ -435,6 +460,15 @@
         // ==========================================
         // 3. UI MODALS & VIEW NAVIGATION
         // ==========================================
+        function updateCapacityLabel(){document.getElementById("capacityValue").innerText=document.getElementById("roomCapacity").value;}
+        function updateRoomOptions(){
+            const mode=document.getElementById("gameMode").value,slider=document.getElementById("roomCapacity");
+            if(mode==="teams_2v2"){slider.max=4;slider.value=Math.min(4,Math.max(2,Number(slider.value)));}
+            else if(mode==="teams_4v4"){slider.max=8;slider.value=8;}else if(mode==="solo_vs_all"){slider.max=8;}
+            else slider.max=8;updateCapacityLabel();
+        }
+        function setTheme(theme){const value=["neon","sunset","mint"].includes(theme)?theme:"neon";document.body.dataset.theme=value;localStorage.setItem("bubbleArenaTheme",value);}
+
         function showModal(title, msg) {
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalMessage').innerText = msg;
@@ -456,58 +490,49 @@
         // ==========================================
         // 4. ROOM MANAGEMENT LOGIC
         // ==========================================
-        function createRoom() {
-            playSound('click');
-            const nickInput = document.getElementById('nicknameInput').value.trim();
-            if (!nickInput) {
-                showModal("Nickname Required", "Please enter a nickname before creating a room.");
-                return;
-            }
-            myNickname = nickInput;
-            currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
-            isHost = true;
-
-            roomPlayers = [{ id: playerId, nickname: myNickname, isHost: true, isBot: false, status: 'alive', score: 0, grid: [] }];
-
-            initRoomChannel();
-            enterRoomLobbyUI();
+        function getSavedNickname(){
+            if(myNickname)return myNickname;
+            const input=document.getElementById("nicknameInput"),name=input.value.trim().replace(/\s+/g," ").slice(0,24);
+            if(!name){showModal("Nickname required","Enter your name once; it will be saved on this device.");return null;}
+            myNickname=name;localStorage.setItem("bubbleArenaNickname",name);input.value=name;input.disabled=true;return name;
         }
 
-        function joinRoom() {
-            playSound('click');
-            const nickInput = document.getElementById('nicknameInput').value.trim();
-            const codeInput = document.getElementById('roomCodeInput').value.trim();
-
-            if (!nickInput) {
-                showModal("Nickname Required", "Please enter a nickname.");
-                return;
-            }
-            if (codeInput.length !== 4) {
-                showModal("Invalid Code", "Please enter a 4-digit code provided by your friend.");
-                return;
-            }
-
-            myNickname = nickInput;
-            currentRoomCode = codeInput;
-            isHost = false;
-
-            initRoomChannel();
-            enterRoomLobbyUI();
-
-            // Announce join to room host
-            setTimeout(() => {
-                if (roomChannel) {
-                    roomChannel.send({
-                        type: 'broadcast',
-                        event: 'PLAYER_JOIN_REQ',
-                        payload: { id: playerId, nickname: myNickname }
-                    });
-                }
-            }, 500);
+        function createRoom(){
+         const input=document.getElementById('nicknameInput'),nickname=myNickname||input.value.trim().replace(/\s+/g,' ').slice(0,24);
+         if(!nickname)return showModal('Nickname required','Enter your player name first.');
+         myNickname=nickname;localStorage.setItem('bubbleArenaNickname',nickname);input.value=nickname;input.disabled=true;
+         roomMode=document.getElementById('gameMode').value;roomMaxPlayers=Number(document.getElementById('roomCapacity').value);
+         const code=String(Math.floor(1000+Math.random()*9000));
+         supabaseClient.from('rooms').insert({code:code,status:'waiting',host_id:playerId,game_mode:roomMode,max_players:roomMaxPlayers}).select().single()
+         .then(function(r){if(r.error)throw r.error;currentRoomCode=code;return supabaseClient.from('players').upsert({id:playerId,room_code:code,nickname:nickname,is_host:true,score:0,status:'alive',grid_state:[]},{onConflict:'id'});})
+         .then(function(r){if(r.error)throw r.error;isHost=true;roomPlayers=[{id:playerId,nickname:nickname,isHost:true,isBot:false,status:'alive',score:0,grid:[]}];initRoomChannel();enterRoomLobbyUI();})
+         .catch(function(e){showModal('Could not create room',e.message||'Run the supplied Supabase SQL, then retry.');});
+        }
+        
+        async function joinRoom(){
+         const input=document.getElementById('nicknameInput'),nickname=myNickname||input.value.trim().replace(/\s+/g,' ').slice(0,24),code=document.getElementById('roomCodeInput').value.trim();
+         if(!nickname)return showModal('Nickname required','Enter your player name first.');
+         if(!/^\d{4}$/.test(code))return showModal('Invalid code','Enter the four digit room code.');
+         myNickname=nickname;localStorage.setItem('bubbleArenaNickname',nickname);input.value=nickname;input.disabled=true;
+         try{
+          const r=await supabaseClient.from('rooms').select('*').eq('code',code).maybeSingle();
+          if(r.error)throw r.error;if(!r.data)return showModal('Room not found','Check the code and try again.');
+          if(r.data.status!=='waiting')return showModal('Match started','Ask the host to create a new room.');
+          const ps=await supabaseClient.from('players').select('*').eq('room_code',code).order('joined_at',{ascending:true});
+          if(ps.error)throw ps.error;const rows=ps.data||[],cap=Number(r.data.max_players||8);
+          if(!rows.some(function(p){return p.id===playerId;})&&rows.length>=cap)return showModal('Room full','This room has reached its player limit.');
+          const saved=await supabaseClient.from('players').upsert({id:playerId,room_code:code,nickname:nickname,is_host:r.data.host_id===playerId,status:'alive',score:0,grid_state:[]},{onConflict:'id'});
+          if(saved.error)throw saved.error;
+          const list=await supabaseClient.from('players').select('*').eq('room_code',code).order('joined_at',{ascending:true});
+          if(list.error)throw list.error;currentRoomCode=code;roomMode=r.data.game_mode||'ffa';roomMaxPlayers=cap;isHost=r.data.host_id===playerId;
+          roomPlayers=(list.data||[]).map(function(p){return {id:p.id,nickname:p.nickname,isHost:!!p.is_host,isBot:false,status:p.status||'alive',score:p.score||0,grid:p.grid_state||[],team:p.team_no};});
+          initRoomChannel();enterRoomLobbyUI();
+          setTimeout(function(){if(roomChannel)roomChannel.send({type:'broadcast',event:'PLAYER_JOIN_REQ',payload:{id:playerId}});},500);
+         }catch(e){showModal('Could not join room',e.message||'Check the Supabase setup.');}
         }
 
-        function addBotPlayer() {
-            if (!isHost || roomPlayers.length >= 4) return;
+                function addBotPlayer() {
+            if (!isHost || roomPlayers.length >= roomMaxPlayers) return;
             const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
             const botNames = ['BusterBot', 'BubbleAI', 'RoboBuster', 'CyberBuster'];
             const botName = botNames[roomPlayers.length % botNames.length];
@@ -544,27 +569,23 @@
 
         function enterRoomLobbyUI() {
             document.getElementById('displayRoomCode').innerText = currentRoomCode;
+            document.getElementById('roomFormatText').innerText = roomMode.toUpperCase().replace("_", " ") + " · " + roomMaxPlayers + " PLAYER LIMIT";
             switchView('roomLobbyScreen');
             updateLobbyPlayerUI();
         }
 
-        function leaveRoom() {
-            playSound('click');
-            if (roomChannel) {
-                roomChannel.send({
-                    type: 'broadcast',
-                    event: 'PLAYER_LEFT',
-                    payload: { id: playerId }
-                });
-                supabaseClient.removeChannel(roomChannel);
-            }
-            currentRoomCode = null;
-            isHost = false;
-            roomPlayers = [];
-            switchView('lobbyScreen');
+        async function leaveRoom(){
+         playSound('click');const code=currentRoomCode;
+         if(roomChannel)roomChannel.send({type:'broadcast',event:'PLAYER_LEFT',payload:{id:playerId}});
+         if(code&&supabaseClient){
+          if(isHost){const next=roomPlayers.find(function(p){return p.id!==playerId&&!p.isBot;});if(next){await supabaseClient.from('rooms').update({host_id:next.id}).eq('code',code);await supabaseClient.from('players').update({is_host:true}).eq('id',next.id).eq('room_code',code);}else await supabaseClient.from('rooms').delete().eq('code',code);}
+          await supabaseClient.from('players').delete().eq('id',playerId).eq('room_code',code);if(roomChannel)await supabaseClient.removeChannel(roomChannel);
+         }
+         roomChannel=null;currentRoomCode=null;isHost=false;roomPlayers=[];gameActive=false;inGame=false;spectatingId=null;
+         if(pushTimerId)clearTimeout(pushTimerId);if(gameLoopId)cancelAnimationFrame(gameLoopId);gameLoopId=null;switchView('lobbyScreen');
         }
 
-        // ==========================================
+                // ==========================================
         // 5. SUPABASE REALTIME BROADCAST ENGINE
         // ==========================================
         function initRoomChannel() {
@@ -578,7 +599,7 @@
                 // Host receives join request
                 .on('broadcast', { event: 'PLAYER_JOIN_REQ' }, ({ payload }) => {
                     if (isHost) {
-                        if (roomPlayers.length >= 4) return;
+                        if (roomPlayers.length >= roomMaxPlayers) return;
                         if (!roomPlayers.find(p => p.id === payload.id)) {
                             roomPlayers.push({
                                 id: payload.id,
@@ -602,9 +623,8 @@
                     updateLobbyPlayerUI();
                 })
                 // Signal to start countdown
-                .on('broadcast', { event: 'START_GAME' }, () => {
-                    triggerStartCountdown();
-                })
+                .on('broadcast', { event: 'MATCH_CONFIG' }, ({ payload }) => { roomMode = payload.mode || roomMode; roomPlayers.forEach(p => { if (payload.teams && payload.teams[p.id] !== undefined) p.team = payload.teams[p.id]; p.status = 'alive'; }); })
+                .on('broadcast', { event: 'START_GAME' }, ({ payload }) => { triggerStartCountdown(payload || {}); })
                 // Kick event listener
                 .on('broadcast', { event: 'KICK_PLAYER' }, ({ payload }) => {
                     if (payload.targetId === playerId) {
@@ -621,8 +641,9 @@
                     const playerIndex = roomPlayers.findIndex(p => p.id === payload.id);
                     if (playerIndex !== -1) {
                         roomPlayers[playerIndex].status = payload.status;
+                        if (payload.team !== undefined) roomPlayers[playerIndex].team = payload.team;
                     }
-                    updateOpponentPreview(payload.id, payload.grid, payload.score, payload.status);
+                    updateOpponentPreview(payload.id, payload.grid, payload.score, payload.status, payload.phase);
                     checkSurvivalVictory();
                 })
                 // Player left signal
@@ -644,50 +665,27 @@
             roomChannel.send({
                 type: 'broadcast',
                 event: 'SYNC_PLAYERS',
-                payload: { players: roomPlayers }
+                payload: { players: roomPlayers, mode: roomMode, maxPlayers: roomMaxPlayers }
             });
         }
 
-        function updateLobbyPlayerUI() {
-            const playerList = document.getElementById('playerList');
-            const playerCount = document.getElementById('playerCount');
-            const hostOptionsBtn = document.getElementById('hostOptionsBtn');
-            const waitingMsg = document.getElementById('waitingHostMsg');
-
-            playerCount.innerText = `${roomPlayers.length}/4`;
-            playerList.innerHTML = '';
-
-            roomPlayers.forEach(p => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between";
-                card.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full ${p.isBot ? 'bg-purple-500/20 text-purple-400' : 'bg-cyan-500/20 text-cyan-400'} flex items-center justify-center font-bold">
-                            <i class="${p.isBot ? 'fa-solid fa-robot' : 'fa-solid fa-user'}"></i>
-                        </div>
-                        <div>
-                            <p class="font-bold text-xs text-white">${p.nickname} ${p.id === playerId ? '<span class="text-[10px] text-yellow-400">(You)</span>' : ''}</p>
-                            ${p.isHost ? '<span class="text-[9px] font-arcade text-pink-400">HOST</span>' : (p.isBot ? '<span class="text-[9px] text-purple-400">AI BOT</span>' : '<span class="text-[9px] text-slate-500">READY</span>')}
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${isHost && p.id !== playerId ? `<button onclick="kickPlayer('${p.id}')" class="text-[10px] bg-red-900/40 border border-red-700/60 text-red-300 px-2 py-0.5 rounded font-arcade hover:bg-red-800">KICK</button>` : ''}
-                        <span class="w-2.5 h-2.5 rounded-full ${p.status === 'alive' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
-                    </div>
-                `;
-                playerList.appendChild(card);
-            });
-
-            if (isHost) {
-                hostOptionsBtn.classList.remove('hidden');
-                waitingMsg.classList.add('hidden');
-            } else {
-                hostOptionsBtn.classList.add('hidden');
-                waitingMsg.classList.remove('hidden');
-            }
+        function updateLobbyPlayerUI(){
+         const list=document.getElementById('playerList'),count=document.getElementById('playerCount'),host=document.getElementById('hostOptionsBtn'),waiting=document.getElementById('waitingHostMsg');
+         count.textContent=roomPlayers.length+'/'+roomMaxPlayers;list.replaceChildren();
+         roomPlayers.forEach(function(p){
+          const card=document.createElement('div');card.className='bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between';
+          const left=document.createElement('div');left.className='flex items-center gap-3';
+          const avatar=document.createElement('div');avatar.className='w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold';avatar.textContent=p.isBot?'🤖':'●';
+          const detail=document.createElement('div'),nick=document.createElement('p');nick.className='font-bold text-xs text-white';nick.textContent=(p.nickname||'Player')+(p.id===playerId?' (You)':'');
+          const meta=document.createElement('span');meta.className='text-[9px] text-slate-400';meta.textContent=p.isHost?'HOST':(p.isBot?'AI BOT':(p.status==='eliminated'?'ELIMINATED':'READY'));
+          detail.append(nick,meta);left.append(avatar,detail);card.append(left);
+          if(isHost&&p.id!==playerId&&!p.isBot){const kick=document.createElement('button');kick.className='text-[10px] bg-red-900/40 border border-red-700/60 text-red-300 px-2 py-1 rounded';kick.textContent='KICK';kick.onclick=function(){kickPlayer(p.id);};card.append(kick);}
+          const dot=document.createElement('span');dot.className='w-2.5 h-2.5 rounded-full';dot.style.background=p.status==='alive'?'#10b981':'#ef4444';card.append(dot);list.append(card);
+         });
+         host.classList.toggle('hidden',!isHost);waiting.classList.toggle('hidden',isHost);document.getElementById('startButton').disabled=roomPlayers.length<2;
         }
 
-        // ==========================================
+                // ==========================================
         // 6. CHAT & EMOJI SYSTEM
         // ==========================================
         function sendEmoji(emojiStr, inputId) {
@@ -711,61 +709,35 @@
             });
         }
 
-        function renderChatMessage(sender, message) {
-            const lobbyBox = document.getElementById('lobbyChatBox');
-            const gameBox = document.getElementById('inGameChatBox');
-
-            const msgDiv = `
-                <div class="bg-slate-900/80 p-1.5 rounded border border-slate-800 text-[11px]">
-                    <span class="font-bold text-cyan-400">${sender}:</span> 
-                    <span class="text-slate-200">${message}</span>
-                </div>
-            `;
-
-            if (lobbyBox) { lobbyBox.insertAdjacentHTML('beforeend', msgDiv); lobbyBox.scrollTop = lobbyBox.scrollHeight; }
-            if (gameBox) { gameBox.insertAdjacentHTML('beforeend', msgDiv); gameBox.scrollTop = gameBox.scrollHeight; }
+        function renderChatMessage(sender,message){
+         const lobby=document.getElementById('lobbyChatBox'),battle=document.getElementById('inGameChatBox');
+         [lobby,battle].forEach(function(box){if(!box)return;const row=document.createElement('div');row.className='bg-slate-900/80 p-1.5 rounded border border-slate-800 text-[11px]';const name=document.createElement('span');name.className='font-bold text-cyan-400';name.textContent=sender+': ';const text=document.createElement('span');text.className='text-slate-200';text.textContent=message;row.append(name,text);box.appendChild(row);box.scrollTop=box.scrollHeight;});
         }
 
-        // ==========================================
+                // ==========================================
         // 7. MATCH COUNTDOWN & OPPONENT MINIATURES
         // ==========================================
-        function requestStartGame() {
-            if (!isHost || !roomChannel) return;
-            roomChannel.send({
-                type: 'broadcast',
-                event: 'START_GAME',
-                payload: {}
-            });
-            triggerStartCountdown();
+        function requestStartGame(){
+         if(!isHost||!roomChannel||roomPlayers.length<2)return;
+         const teams={};roomPlayers.forEach(function(p,i){teams[p.id]=roomMode==='solo_vs_all'?(i===0?'solo':'group'):(roomMode==='teams_2v2'||roomMode==='teams_4v4'?i%2:p.id);p.team=teams[p.id];p.status='alive';});
+         roomChannel.send({type:'broadcast',event:'MATCH_CONFIG',payload:{mode:roomMode,teams:teams}});
+         supabaseClient.from('rooms').update({status:'playing'}).eq('code',currentRoomCode);
+         roomChannel.send({type:'broadcast',event:'START_GAME',payload:{mode:roomMode,teams:teams}});
+         triggerStartCountdown({mode:roomMode,teams:teams});
         }
 
-        function triggerStartCountdown() {
-            inGame = true;
-            switchView('gameScreen');
-            document.getElementById('myNickDisplay').innerText = myNickname;
-            document.getElementById('countdownOverlay').classList.remove('hidden');
-
-            setupOpponentsContainer();
-
-            let count = 3;
-            const countElem = document.getElementById('countdownText');
-            countElem.innerText = count;
-
-            const interval = setInterval(() => {
-                count--;
-                if (count > 0) {
-                    countElem.innerText = count;
-                    playSound('click');
-                } else {
-                    clearInterval(interval);
-                    document.getElementById('countdownOverlay').classList.add('hidden');
-                    startBubbleGameEngine();
-                    if (isHost) startAIBotSimulations();
-                }
-            }, 1000);
+                function triggerStartCountdown(config){
+         if(inGame)return;config=config||{};if(config.mode)roomMode=config.mode;
+         if(config.teams)roomPlayers.forEach(function(p){p.team=config.teams[p.id];});
+         inGame=true;matchFinished=false;spectatingId=null;switchView('gameScreen');
+         document.getElementById('myNickDisplay').innerText=myNickname;
+         document.getElementById('countdownOverlay').classList.remove('hidden');setupOpponentsContainer();
+         let count=3;document.getElementById('countdownText').innerText=count;
+         const timer=setInterval(function(){count--;if(count>0){document.getElementById('countdownText').innerText=count;playSound('click');}
+         else{clearInterval(timer);document.getElementById('countdownOverlay').classList.add('hidden');startBubbleGameEngine();if(isHost)startAIBotSimulations();}},1000);
         }
 
-        function startAIBotSimulations() {
+                function startAIBotSimulations() {
             const bots = roomPlayers.filter(p => p.isBot);
             bots.forEach(bot => {
                 let botGrid = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(null));
@@ -795,55 +767,58 @@
             });
         }
 
-        function setupOpponentsContainer() {
-            const container = document.getElementById('opponentsContainer');
-            container.innerHTML = '';
-
-            const opponents = roomPlayers.filter(p => p.id !== playerId);
-            opponents.forEach(op => {
-                const box = document.createElement('div');
-                box.className = "bg-slate-950 border border-slate-800 rounded-lg p-2 flex flex-col items-center w-full";
-                box.innerHTML = `
-                    <div class="flex justify-between w-full text-[10px] font-arcade mb-1">
-                        <span class="text-cyan-400 truncate max-w-[80px]">${op.nickname}</span>
-                        <span id="oppScore_${op.id}" class="text-yellow-400">0</span>
-                    </div>
-                    <canvas id="oppCanvas_${op.id}" width="160" height="210" class="bg-slate-900 border border-slate-800 rounded block w-full"></canvas>
-                `;
-                container.appendChild(box);
-            });
+        function setupOpponentsContainer(){
+         const container=document.getElementById('opponentsContainer');container.replaceChildren();
+         roomPlayers.filter(function(p){return p.id!==playerId;}).forEach(function(p){
+          const box=document.createElement('div');box.className='bg-slate-950 border border-slate-800 rounded-lg p-2 flex flex-col items-center w-full cursor-pointer hover:border-cyan-400';box.title='Select to spectate '+p.nickname;box.onclick=function(){spectatePlayer(p.id);};
+          const header=document.createElement('div');header.className='flex justify-between w-full text-[10px] font-arcade mb-1';
+          const name=document.createElement('span');name.className='text-cyan-400 truncate max-w-[80px]';name.textContent=p.nickname||'Player';
+          const score=document.createElement('span');score.id='oppScore_'+p.id;score.className='text-yellow-400';score.textContent=String(p.score||0);header.append(name,score);
+          const preview=document.createElement('canvas');preview.id='oppCanvas_'+p.id;preview.width=160;preview.height=210;preview.className='bg-slate-900 border border-slate-800 rounded block w-full';
+          const status=document.createElement('span');status.id='oppStatus_'+p.id;status.className='text-[9px] text-slate-400 mt-1';status.textContent=p.status==='eliminated'?'OUT · SPECTATE':'LIVE · SELECT TO WATCH';
+          box.append(header,preview,status);container.append(box);updateOpponentPreview(p.id,p.grid||[],p.score,p.status,(remotePlayerStates[p.id]||{}).phase||0);
+         });
         }
 
-        function checkSurvivalVictory() {
-            if (!inGame || !gameActive) return;
-
-            const aliveOpponents = roomPlayers.filter(p => p.id !== playerId && p.status === 'alive');
-            if (aliveOpponents.length === 0 && roomPlayers.length > 1) {
-                // VICTORY!
-                gameActive = false;
-                if (pushTimerId) clearTimeout(pushTimerId);
-                
-                document.getElementById('gameOverTitle').innerText = "VICTORY!";
-                document.getElementById('gameOverTitle').className = "font-arcade text-2xl text-yellow-400 mb-2";
-                document.getElementById('gameOverSub').innerText = "You are the last buster standing!";
-                document.getElementById('gameOverOverlay').classList.remove('hidden');
-            }
+                function checkSurvivalVictory(){
+         if(!inGame||matchFinished||roomPlayers.length<2)return;
+         const alive=roomPlayers.filter(function(p){return p.status!=='eliminated';});
+         const teams=new Set(alive.map(function(p){return p.team===undefined||p.team===null?p.id:p.team;}));
+         if(alive.length<=1||teams.size<=1){
+          matchFinished=true;gameActive=false;if(pushTimerId)clearTimeout(pushTimerId);
+          const me=roomPlayers.find(function(p){return p.id===playerId;});
+          const won=alive.some(function(p){return p.id===playerId||(me&&p.team===me.team);});
+          document.getElementById('gameOverTitle').innerText=won?'VICTORY!':'MATCH OVER';
+          document.getElementById('gameOverSub').innerText=won?'Your side is the last one standing.':'You can spectate the last player in the match.';
+          document.getElementById('spectateButton').classList.toggle('hidden',alive.length===0);
+          document.getElementById('gameOverOverlay').classList.remove('hidden');
+         }
+        }
+        
+        function spectatePlayer(id){
+         const me=roomPlayers.find(function(p){return p.id===playerId;});
+         if(!inGame||!me||me.status!=='eliminated')return;
+         spectatingId=id;gameActive=false;if(pushTimerId)clearTimeout(pushTimerId);
+         document.getElementById('gameOverOverlay').classList.add('hidden');if(!gameLoopId)gameLoop();
+        }
+        
+        function startSpectating(){
+         const target=roomPlayers.find(function(p){return p.id!==playerId&&p.status!=='eliminated';})||roomPlayers.find(function(p){return p.id!==playerId;});
+         if(target)spectatePlayer(target.id);else showModal('No players','There are no other players to spectate.');
         }
 
-        // ==========================================
-        // 8. CANVAS GAME ENGINE (GRAPHICS & PHYSICS)
-        // ==========================================
-        let canvas, ctx;
+                let canvas, ctx;
         let gameLoopId = null;
         let pushTimerId = null;
         let gameActive = false;
 
-        const GRID_ROWS = 12;
+        const GRID_ROWS = 14;
         const GRID_COLS = 8;
         const BUBBLE_RADIUS = 19;
         const BUBBLE_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 
         let grid = [];
+        let parityPhase = 0;
         let cannonAngle = Math.PI / 2;
         let currentBubble = null;
         let nextBubble = null;
@@ -870,10 +845,7 @@
             };
 
             canvas.onclick = fireBubble;
-            canvas.ontouchend = (e) => {
-                e.preventDefault();
-                fireBubble();
-            };
+            
 
             setupTouchAimButtons();
 
@@ -886,6 +858,7 @@
                 if (e.key === 'c' || e.key === 'C') swapNextBubble();
             };
 
+            parityPhase = 0;
             initGrid();
             playerScore = 0;
             dropIntervalMs = 12000;
@@ -916,32 +889,17 @@
             if (dy > 5) cannonAngle = Math.atan2(dy, dx);
         }
 
-        function setupTouchAimButtons() {
-            let leftInterval, rightInterval;
-
-            const btnLeft = document.getElementById('btnAimLeft');
-            const btnRight = document.getElementById('btnAimRight');
-
-            btnLeft.ontouchstart = (e) => {
-                e.preventDefault();
-                cannonAngle = Math.min(Math.PI - 0.15, cannonAngle + 0.1);
-                leftInterval = setInterval(() => {
-                    cannonAngle = Math.min(Math.PI - 0.15, cannonAngle + 0.05);
-                }, 50);
-            };
-            btnLeft.ontouchend = () => clearInterval(leftInterval);
-
-            btnRight.ontouchstart = (e) => {
-                e.preventDefault();
-                cannonAngle = Math.max(0.15, cannonAngle - 0.1);
-                rightInterval = setInterval(() => {
-                    cannonAngle = Math.max(0.15, cannonAngle - 0.05);
-                }, 50);
-            };
-            btnRight.ontouchend = () => clearInterval(rightInterval);
+        function setupTouchAimButtons(){
+         const left=document.getElementById('btnAimLeft'),right=document.getElementById('btnAimRight');
+         function bind(button,direction){
+          let timer=null;
+          button.onpointerdown=function(e){e.preventDefault();button.setPointerCapture(e.pointerId);cannonAngle=Math.max(.15,Math.min(Math.PI-.15,cannonAngle+direction*.1));timer=setInterval(function(){if(button.matches(':active')&&gameActive)cannonAngle=Math.max(.15,Math.min(Math.PI-.15,cannonAngle+direction*.045));},45);};
+          button.onpointerup=button.onpointercancel=button.onpointerleave=function(){if(timer)clearInterval(timer);timer=null;};
+         }
+         bind(left,1);bind(right,-1);
         }
 
-        function swapNextBubble() {
+                function swapNextBubble() {
             if (!gameActive || firedBubble) return;
             const temp = currentBubble;
             currentBubble = nextBubble;
@@ -996,58 +954,29 @@
         }
 
         // ACCURATE STAGGERED ROW PUSH (PRESERVES COLORS & INDEXING)
-        function pushNewRow() {
-            // Create brand new row of bubbles
-            const newRow = Array(GRID_COLS).fill(null).map(() => BUBBLE_COLORS[Math.floor(Math.random() * 5)]);
-            
-            // Shift grid down
-            grid.pop();
-            grid.unshift(newRow);
-
-            triggerScreenShake();
-
-            // Elimination Check
-            for (let c = 0; c < GRID_COLS; c++) {
-                if (grid[GRID_ROWS - 1][c] !== null) {
-                    triggerGameOver();
-                    return;
-                }
-            }
+        function pushNewRow(){
+         const newRow=Array(GRID_COLS).fill(null).map(function(){return BUBBLE_COLORS[Math.floor(Math.random()*BUBBLE_COLORS.length)];});
+         const next=[newRow].concat(grid.slice(0,-1)),phase=1-parityPhase,danger=30+(GRID_ROWS-1)*(BUBBLE_RADIUS*1.73);
+         const overflow=next[GRID_ROWS-1].some(Boolean)||next.some(function(row,r){return row.some(function(b){return b&&30+r*(BUBBLE_RADIUS*1.73)+BUBBLE_RADIUS>=danger;});});
+         if(overflow){triggerGameOver();return;}grid=next;parityPhase=phase;triggerScreenShake();playSound('drop');
         }
 
-        function triggerScreenShake() {
+                function triggerScreenShake() {
             const wrapper = document.getElementById('canvasWrapper');
             wrapper.classList.add('animate-shake');
             setTimeout(() => wrapper.classList.remove('animate-shake'), 300);
         }
 
-        function gameLoop() {
-            if (!gameActive) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            updateFiredBubble();
-            drawTrajectory();
-            drawGrid();
-            drawCannon();
-            drawFiredBubble();
-            drawParticles();
-            drawFloatingTexts();
-            drawCeilingLine();
-
-            // Broadcast game state to opponents 10x per sec
-            if (Math.random() < 0.2 && roomChannel) {
-                roomChannel.send({
-                    type: 'broadcast',
-                    event: 'GAME_STATE_UPDATE',
-                    payload: { id: playerId, grid: grid, score: playerScore, status: 'alive' }
-                });
-            }
-
-            gameLoopId = requestAnimationFrame(gameLoop);
+        function gameLoop(){
+         if(!gameActive&&!spectatingId){gameLoopId=null;return;}
+         ctx.clearRect(0,0,canvas.width,canvas.height);if(gameActive&&!spectatingId)updateFiredBubble();
+         if(spectatingId&&remotePlayerStates[spectatingId]){drawGrid(remotePlayerStates[spectatingId].grid,remotePlayerStates[spectatingId].phase);drawCeilingLine();}
+         else{drawTrajectory();drawGrid();drawCannon();drawFiredBubble();drawParticles();drawFloatingTexts();drawCeilingLine();}
+         if(gameActive&&!spectatingId&&Math.random()<0.2&&roomChannel){const me=roomPlayers.find(function(p){return p.id===playerId;});roomChannel.send({type:'broadcast',event:'GAME_STATE_UPDATE',payload:{id:playerId,grid:grid,phase:parityPhase,score:playerScore,status:'alive',team:me&&me.team}});}
+         gameLoopId=requestAnimationFrame(gameLoop);
         }
 
-        function drawTrajectory() {
+                function drawTrajectory() {
             if (firedBubble) return;
 
             ctx.beginPath();
@@ -1069,23 +998,12 @@
             }
         }
 
-        function drawGrid() {
-            const startX = 22;
-            const startY = 30;
-
-            for (let r = 0; r < GRID_ROWS; r++) {
-                for (let c = 0; c < GRID_COLS; c++) {
-                    const color = grid[r][c];
-                    if (color) {
-                        const x = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
-                        const y = startY + r * (BUBBLE_RADIUS * 1.73);
-                        drawGlossyBubble(ctx, x, y, BUBBLE_RADIUS, color);
-                    }
-                }
-            }
+        function drawGrid(boardOverride,phaseOverride){
+         const board=boardOverride||grid,phase=phaseOverride===undefined?parityPhase:phaseOverride,startX=22,startY=30;
+         for(let r=0;r<board.length;r++)for(let c=0;c<board[r].length;c++){const color=board[r][c];if(!color)continue;const x=startX+c*(BUBBLE_RADIUS*2)+((r+phase)%2===1?BUBBLE_RADIUS:0),y=startY+r*(BUBBLE_RADIUS*1.73);drawGlossyBubble(ctx,x,y,BUBBLE_RADIUS,color);}
         }
 
-        function drawGlossyBubble(targetCtx, x, y, r, color) {
+                function drawGlossyBubble(targetCtx, x, y, r, color) {
             targetCtx.save();
             // Outer shadow ring
             targetCtx.shadowColor = 'rgba(0, 0, 0, 0.4)';
@@ -1182,7 +1100,7 @@
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
                     if (grid[r][c]) {
-                        const bx = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                        const bx = startX + c * (BUBBLE_RADIUS * 2) + ((r + parityPhase) % 2 === 1 ? BUBBLE_RADIUS : 0);
                         const by = startY + r * (BUBBLE_RADIUS * 1.73);
                         if (Math.hypot(firedBubble.x - bx, firedBubble.y - by) < BUBBLE_RADIUS * 1.75) return true;
                     }
@@ -1191,35 +1109,25 @@
             return false;
         }
 
-        function snapToGrid() {
-            const startX = 22;
-            const startY = 30;
-            let closestR = 0, closestC = 0, minDist = Infinity;
-
-            for (let r = 0; r < GRID_ROWS; r++) {
-                for (let c = 0; c < GRID_COLS; c++) {
-                    const bx = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
-                    const by = startY + r * (BUBBLE_RADIUS * 1.73);
-                    const dist = Math.hypot(firedBubble.x - bx, firedBubble.y - by);
-                    if (dist < minDist && grid[r][c] === null) {
-                        minDist = dist;
-                        closestR = r;
-                        closestC = c;
-                    }
-                }
-            }
-
-            grid[closestR][closestC] = firedBubble.color;
-            firedBubble = null;
-
-            popMatches(closestR, closestC);
-
-            if (closestR >= GRID_ROWS - 1) {
-                triggerGameOver();
-            }
+        function snapToGrid(){
+         const startX=22,startY=30,x=firedBubble.x,y=firedBubble.y,candidates=[],keys=new Set();
+         function add(r,c){const key=r+':'+c;if(r>=0&&r<GRID_ROWS&&c>=0&&c<GRID_COLS&&grid[r][c]===null&&!keys.has(key)){keys.add(key);candidates.push([r,c]);}}
+         if(y<=startY+BUBBLE_RADIUS+3||!grid.some(function(row){return row.some(Boolean);}))for(let c=0;c<GRID_COLS;c++)add(0,c);
+         for(let r=0;r<GRID_ROWS;r++)for(let c=0;c<GRID_COLS;c++)if(grid[r][c]){
+          add(r,c-1);add(r,c+1);const off=(r+parityPhase)%2===1?1:0;add(r-1,c-1+off);add(r-1,c+off);add(r+1,c-1+off);add(r+1,c+off);
+         }
+         if(!candidates.length){firedBubble=null;triggerGameOver();return;}
+         candidates.sort(function(a,b){
+          const ax=startX+a[1]*BUBBLE_RADIUS*2+((a[0]+parityPhase)%2?BUBBLE_RADIUS:0),ay=startY+a[0]*BUBBLE_RADIUS*1.73;
+          const bx=startX+b[1]*BUBBLE_RADIUS*2+((b[0]+parityPhase)%2?BUBBLE_RADIUS:0),by=startY+b[0]*BUBBLE_RADIUS*1.73;
+          return Math.hypot(x-ax,y-ay)-Math.hypot(x-bx,y-by);
+         });
+         const r=candidates[0][0],c=candidates[0][1];grid[r][c]=firedBubble.color;firedBubble=null;popMatches(r,c);
+         const danger=30+(GRID_ROWS-1)*(BUBBLE_RADIUS*1.73);
+         if(grid.some(function(row,rr){return row.some(function(b){return b&&30+rr*(BUBBLE_RADIUS*1.73)+BUBBLE_RADIUS>=danger;});}))triggerGameOver();
         }
 
-        function popMatches(r, c) {
+                function popMatches(r, c) {
             const targetColor = grid[r][c];
             const matches = [];
             const visited = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(false));
@@ -1231,7 +1139,7 @@
                 visited[row][col] = true;
                 matches.push({ r: row, c: col });
 
-                const offset = row % 2 === 1 ? 1 : 0;
+                const offset = (row + parityPhase) % 2 === 1 ? 1 : 0;
                 const neighbors = [
                     [row - 1, col - 1 + offset], [row - 1, col + offset],
                     [row, col - 1],             [row, col + 1],
@@ -1249,7 +1157,7 @@
                 const startY = 30;
 
                 matches.forEach(m => { 
-                    const bx = startX + m.c * (BUBBLE_RADIUS * 2) + (m.r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                    const bx = startX + m.c * (BUBBLE_RADIUS * 2) + ((m.r + parityPhase) % 2 === 1 ? BUBBLE_RADIUS : 0);
                     const by = startY + m.r * (BUBBLE_RADIUS * 1.73);
                     spawnParticles(bx, by, grid[m.r][m.c]);
                     grid[m.r][m.c] = null; 
@@ -1274,7 +1182,7 @@
 
                 connected[row][col] = true;
 
-                const offset = row % 2 === 1 ? 1 : 0;
+                const offset = (row + parityPhase) % 2 === 1 ? 1 : 0;
                 const neighbors = [
                     [row - 1, col - 1 + offset], [row - 1, col + offset],
                     [row, col - 1],             [row, col + 1],
@@ -1295,7 +1203,7 @@
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
                     if (grid[r][c] && !connected[r][c]) {
-                        const bx = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                        const bx = startX + c * (BUBBLE_RADIUS * 2) + ((r + parityPhase) % 2 === 1 ? BUBBLE_RADIUS : 0);
                         const by = startY + r * (BUBBLE_RADIUS * 1.73);
                         spawnParticles(bx, by, grid[r][c]);
                         grid[r][c] = null;
@@ -1375,7 +1283,8 @@
             }
         }
 
-        function updateOpponentPreview(oppId, oppGrid, oppScore, oppStatus) {
+        function updateOpponentPreview(oppId, oppGrid, oppScore, oppStatus, oppPhase) {
+            remotePlayerStates[oppId] = {grid:oppGrid || [], phase:oppPhase || 0, score:oppScore || 0, status:oppStatus || "alive"};
             const oppCanvas = document.getElementById(`oppCanvas_${oppId}`);
             const oppScoreElem = document.getElementById(`oppScore_${oppId}`);
             if (!oppCanvas) return;
@@ -1388,13 +1297,14 @@
             const miniRadius = 8;
             const startX = 12;
             const startY = 12;
+            const phase = Number(oppPhase || 0);
 
             if (oppGrid && oppGrid.length) {
                 for (let r = 0; r < oppGrid.length; r++) {
                     for (let c = 0; c < oppGrid[r].length; c++) {
                         const color = oppGrid[r][c];
                         if (color) {
-                            const x = startX + c * (miniRadius * 2) + (r % 2 === 1 ? miniRadius : 0);
+                            const x = startX + c * (miniRadius * 2) + ((r + phase) % 2 === 1 ? miniRadius : 0);
                             const y = startY + r * (miniRadius * 1.73);
                             drawGlossyBubble(oCtx, x, y, miniRadius, color);
                         }
@@ -1422,12 +1332,13 @@
 
             const myPlayer = roomPlayers.find(p => p.id === playerId);
             if (myPlayer) myPlayer.status = 'eliminated';
+            supabaseClient.from('players').update({status:'eliminated',score:playerScore,grid_state:grid}).eq('id',playerId).eq('room_code',currentRoomCode);
 
             if (roomChannel) {
                 roomChannel.send({
                     type: 'broadcast',
                     event: 'GAME_STATE_UPDATE',
-                    payload: { id: playerId, grid: grid, score: playerScore, status: 'eliminated' }
+                    payload: { id: playerId, grid: grid, phase: parityPhase, score: playerScore, status: 'eliminated', team: myPlayer && myPlayer.team }
                 });
             }
 
@@ -1438,6 +1349,9 @@
             document.getElementById('gameOverOverlay').classList.add('hidden');
             gameActive = false;
             inGame = false;
+            spectatingId = null;
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            gameLoopId = null;
             
             Object.keys(botLoopIntervals).forEach(id => clearInterval(botLoopIntervals[id]));
             botLoopIntervals = {};
