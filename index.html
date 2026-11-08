@@ -1,1273 +1,966 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-[#313338] text-gray-100 font-sans selection:bg-[#5865F2] selection:text-white">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Discord Clone - Supabase Auth & WebRTC Calling</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Supabase JS Client v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Bobble Online - 4 Player Battle</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Fredoka+One&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <style>
-    /* Custom Scrollbar for Authentic Discord Look */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #2b2d31;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #1a1b1e;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #111214;
-    }
-  </style>
+    <style>
+        .font-arcade { font-family: 'Press Start 2P', cursive; }
+        .font-bubble { font-family: 'Fredoka One', cursive; }
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Retro Canvas Borders & Glowing Effects */
+        .arcade-box {
+            border: 4px solid #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5), inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .bubble-btn {
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+        }
+        .bubble-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Custom Scrollbar for Chat */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
 </head>
-<body class="h-full overflow-hidden flex flex-col">
+<body class="bg-slate-950 text-white min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
 
-  <!-- ==================== AUTHENTICATION MODAL ==================== -->
-  <div id="authModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-    <div class="bg-[#313338] border border-[#2b2d31] w-full max-w-md rounded-lg p-6 shadow-2xl space-y-5">
-      
-      <!-- Logo & Header -->
-      <div class="text-center space-y-2">
-        <div class="w-14 h-14 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto shadow-lg">
-          <i class="fa-brands fa-discord text-3xl text-white"></i>
+    <!-- TOP HEADER / NAVBAR -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid font-bubble text-3xl text-pink-500 fa-circle-dot animate-bounce"></i>
+                <h1 class="font-arcade text-xl sm:text-2xl bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
+                    BUBBLE BUSTERS
+                </h1>
+            </div>
+            <div id="userInfo" class="text-sm font-semibold text-slate-400 flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                Online Arena
+            </div>
         </div>
-        <h2 id="authTitle" class="text-2xl font-bold text-white">Welcome Back!</h2>
-        <p id="authSubtitle" class="text-xs text-gray-400">We're so excited to see you again!</p>
-      </div>
+    </header>
 
-      <!-- Sign In / Sign Up Tab Switcher -->
-      <div class="flex border-b border-[#3f4147] text-sm font-semibold">
-        <button id="tabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]">Sign In</button>
-        <button id="tabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent">Create Account</button>
-      </div>
+    <!-- ALERT MESSAGE MODAL -->
+    <div id="customModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-pink-500 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
+            <h3 id="modalTitle" class="font-arcade text-lg text-yellow-400 mb-3">Notice</h3>
+            <p id="modalMessage" class="text-slate-300 text-sm mb-6">Message content goes here.</p>
+            <button onclick="closeModal()" class="bubble-btn bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 px-6 rounded-xl w-full">
+                OK
+            </button>
+        </div>
+    </div>
 
-      <!-- Auth Form Fields -->
-      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-grow flex items-center justify-center p-2 sm:p-4">
+
+        <!-- STEP 1: LOBBY JOIN / CREATE SCREEN -->
+        <div id="lobbyScreen" class="w-full max-w-md bg-slate-900 border-2 border-slate-800 rounded-2xl p-6 shadow-2xl">
+            <div class="text-center mb-6">
+                <h2 class="font-bubble text-3xl text-cyan-400 mb-1">Welcome Player!</h2>
+                <p class="text-xs text-slate-400">Join or host a multiplayer bubble showdown</p>
+            </div>
+
+            <!-- Nickname Input -->
+            <div class="mb-5">
+                <label class="block text-xs font-arcade text-slate-300 mb-2">YOUR NICKNAME</label>
+                <input type="text" id="nicknameInput" maxlength="12" placeholder="BubbleMaster" 
+                       class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-bold text-yellow-300 focus:outline-none focus:border-cyan-500 transition">
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-4">
+                <button onclick="createRoom()" class="bubble-btn w-full bg-emerald-600 hover:bg-emerald-500 text-white font-arcade text-sm py-4 rounded-xl flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> CREATE NEW ROOM
+                </button>
+
+                <div class="flex items-center my-4">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="px-3 text-xs text-slate-500 font-arcade">OR</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="roomCodeInput" maxlength="4" placeholder="4-DIGIT CODE" 
+                           class="w-2/3 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center text-lg font-arcade uppercase tracking-widest text-cyan-400 focus:outline-none focus:border-cyan-500">
+                    <button onclick="joinRoom()" class="bubble-btn w-1/3 bg-cyan-600 hover:bg-cyan-500 text-white font-arcade text-xs py-3 rounded-xl flex items-center justify-center">
+                        JOIN
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: ROOM LOBBY WAITING SCREEN -->
+        <div id="roomLobbyScreen" class="hidden w-full max-w-4xl bg-slate-900 border-2 border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row gap-6">
+            <!-- Left Panel: Players -->
+            <div class="w-full md:w-1/2 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                        <div>
+                            <span class="text-xs text-slate-400 font-arcade">ROOM CODE</span>
+                            <div id="displayRoomCode" class="font-arcade text-3xl text-yellow-400 tracking-wider">----</div>
+                        </div>
+                        <button onclick="leaveRoom()" class="text-xs text-red-400 hover:text-red-300 font-semibold px-3 py-1 bg-red-950/50 rounded-lg border border-red-800">
+                            Leave
+                        </button>
+                    </div>
+
+                    <h3 class="font-arcade text-xs text-slate-300 mb-3 flex justify-between">
+                        <span>PLAYERS</span>
+                        <span id="playerCount">1/4</span>
+                    </h3>
+
+                    <!-- Player List Grid -->
+                    <div id="playerList" class="grid grid-cols-1 gap-3 mb-6">
+                        <!-- Dynamic Player Slots inserted here -->
+                    </div>
+                </div>
+
+                <!-- Host Controls -->
+                <div>
+                    <button id="startGameBtn" onclick="requestStartGame()" class="hidden bubble-btn w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-arcade text-sm py-4 rounded-xl text-center">
+                        START MATCH
+                    </button>
+                    <p id="waitingHostMsg" class="text-xs text-center text-slate-400 font-semibold animate-pulse py-3">
+                        Waiting for host to start match...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Lobby Chat -->
+            <div class="w-full md:w-1/2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col h-80 md:h-96">
+                <h4 class="font-arcade text-xs text-cyan-400 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-comments"></i> ROOM CHAT
+                </h4>
+                <div id="lobbyChatBox" class="flex-grow overflow-y-auto space-y-2 mb-3 text-xs text-slate-300 pr-2">
+                    <!-- Chat Messages dynamically loaded -->
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="lobbyChatMessage" placeholder="Type message..." 
+                           class="flex-grow bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                           onkeypress="if(event.key === 'Enter') sendChatMessage('lobbyChatMessage')">
+                    <button onclick="sendChatMessage('lobbyChatMessage')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-4 py-2 rounded-lg font-bold">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: GAMEPLAY ARENA SCREEN -->
+        <div id="gameScreen" class="hidden w-full max-w-7xl flex flex-col items-center">
+            
+            <!-- Countdown Overlay -->
+            <div id="countdownOverlay" class="hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[90] flex items-center justify-center">
+                <span id="countdownText" class="font-arcade text-7xl sm:text-9xl text-yellow-400 animate-ping">3</span>
+            </div>
+
+            <!-- Game Arena Layout -->
+            <div class="w-full grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
+                
+                <!-- Main Player Section (Cols 1-3 on Large Screen) -->
+                <div class="lg:col-span-3 flex flex-col items-center">
+                    
+                    <!-- Top Bar Info -->
+                    <div class="w-full bg-slate-900 border border-slate-800 rounded-t-xl p-3 flex justify-between items-center text-xs font-arcade">
+                        <div class="flex items-center gap-4">
+                            <span class="text-cyan-400">YOU: <span id="myNickDisplay" class="text-white">Player</span></span>
+                            <span class="text-yellow-400">SCORE: <span id="myScoreDisplay" class="text-white">0</span></span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-pink-400">SPEED LVL: <span id="speedLevelDisplay" class="text-white">1</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="relative w-full max-w-[420px] bg-slate-950 border-4 border-slate-800 rounded-b-xl overflow-hidden shadow-2xl flex justify-center">
+                        <canvas id="gameCanvas" width="380" height="550" class="block"></canvas>
+
+                        <!-- Game Over / Victory Overlay -->
+                        <div id="gameOverOverlay" class="hidden absolute inset-0 bg-black/85 flex flex-col items-center justify-center p-6 text-center z-40">
+                            <h2 id="gameOverTitle" class="font-arcade text-2xl text-red-500 mb-2">GAME OVER</h2>
+                            <p id="gameOverSub" class="text-sm text-slate-300 mb-6">Your bubbles touched the bottom line!</p>
+                            <button onclick="returnToLobby()" class="bubble-btn bg-cyan-600 hover:bg-cyan-500 text-white font-arcade text-xs py-3 px-6 rounded-xl">
+                                BACK TO LOBBY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opponents Preview Panel & In-Game Chat (Col 4) -->
+                <div class="w-full flex flex-col gap-4">
+                    
+                    <!-- Opponents Canvas Grids -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+                        <h3 class="font-arcade text-xs text-yellow-400 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-users"></i> OPPONENTS
+                        </h3>
+                        <div id="opponentsContainer" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
+                            <!-- Dynamic Opponents Canvas Miniatures inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- In-Game Chat -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col h-64">
+                        <h4 class="font-arcade text-xs text-cyan-400 mb-2">BATTLE CHAT</h4>
+                        <div id="inGameChatBox" class="flex-grow overflow-y-auto space-y-1 text-xs text-slate-300 mb-2 pr-1"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="inGameChatMessage" placeholder="Taunt opponent..." 
+                                   class="flex-grow bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none"
+                                   onkeypress="if(event.key === 'Enter') sendChatMessage('inGameChatMessage')">
+                            <button onclick="sendChatMessage('inGameChatMessage')" class="bg-cyan-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-900 border-t border-slate-800 p-3 text-center text-xs text-slate-500">
+        Puzzle Bobble Online &copy; 2026 - Powered by Supabase Realtime
+    </footer>
+
+    <!-- GAME ENGINE & MULTIPLAYER SCRIPT -->
+    <script>
+        // ==========================================
+        // 1. SUPABASE INITIALIZATION
+        // ==========================================
+        const SUPABASE_URL = "https://duzdubrqkkpgqljbnrlp.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1emR1YnJxa2twZ3FsamJucmxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzQ2NzIsImV4cCI6MjEwOTAxMDY3Mn0.K_KNICMsQxFHPZ6snlNMqjPXc8mvoVhroeXlg-PLBHQ";
         
-        <!-- Username Field (Sign Up Only) -->
-        <div id="usernameField" class="space-y-1 hidden">
-          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Username <span class="text-red-400">*</span></label>
-          <input id="authUsernameInput" type="text" placeholder="e.g. CyberKnight" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
-        </div>
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        <!-- Email Field -->
-        <div class="space-y-1">
-          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Email <span class="text-red-400">*</span></label>
-          <input id="authEmailInput" type="email" required placeholder="name@domain.com" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
-        </div>
+        // Player Unique Session Data
+        const playerId = 'player_' + Math.random().toString(36).substring(2, 9);
+        let myNickname = "";
+        let currentRoomCode = null;
+        let isHost = false;
+        let realtimeSubscription = null;
 
-        <!-- Password Field -->
-        <div class="space-y-1">
-          <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Password <span class="text-red-400">*</span></label>
-          <input id="authPasswordInput" type="password" required placeholder="••••••••" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded focus:outline-none focus:ring-2 focus:ring-[#5865F2]">
-        </div>
+        // Player & Room State Variables
+        let roomPlayers = [];
+        let inGame = false;
 
-        <!-- Error Feedback Banner -->
-        <div id="authErrorMsg" class="text-xs text-red-400 font-medium hidden"></div>
-
-        <!-- Submit Button -->
-        <button id="authSubmitBtn" type="submit" class="w-full bg-[#5865F2] hover:bg-[#4752C4] transition text-white font-semibold py-3 rounded shadow flex items-center justify-center space-x-2">
-          <span id="authBtnText">Sign In</span>
-          <i id="authSpinner" class="fa-solid fa-spinner animate-spin hidden"></i>
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==================== INCOMING CALL MODAL ==================== -->
-  <div id="incomingCallModal" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#2b2d31] border border-[#1e1f22] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center space-y-4 animate-bounce-short">
-      <div class="w-20 h-20 bg-[#5865F2] rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-xl animate-pulse" id="incomingCallerAvatar">
-        U
-      </div>
-      <div class="text-center">
-        <h3 class="text-lg font-bold text-white" id="incomingCallerName">Caller</h3>
-        <p class="text-xs text-gray-400" id="incomingCallType">Incoming Video Call...</p>
-      </div>
-
-      <div class="flex items-center space-x-4 pt-2">
-        <button onclick="acceptIncomingCall(true)" class="bg-green-600 hover:bg-green-700 text-white w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="Accept with Video">
-          <i class="fa-solid fa-video"></i>
-        </button>
-        <button onclick="acceptIncomingCall(false)" class="bg-emerald-600 hover:bg-emerald-700 text-white w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="Accept Voice Only">
-          <i class="fa-solid fa-phone"></i>
-        </button>
-        <button onclick="rejectIncomingCall()" class="bg-red-600 hover:bg-red-700 text-white w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="Decline Call">
-          <i class="fa-solid fa-phone-slash"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MAIN APPLICATION INTERFACE ==================== -->
-  <div class="flex-1 flex overflow-hidden">
-    
-    <!-- 1. Server Navigation Rail (Leftmost) -->
-    <div class="w-18 bg-[#1e1f22] flex flex-col items-center py-3 space-y-3 border-r border-[#2b2d31] flex-shrink-0">
-      <div onclick="switchTab('friends')" class="w-12 h-12 bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-white shadow" title="Direct Messages">
-        <i class="fa-brands fa-discord text-2xl"></i>
-      </div>
-      <div class="w-8 h-[2px] bg-[#35363c] rounded"></div>
-      <div class="w-12 h-12 bg-[#313338] hover:bg-[#5865F2] hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-gray-300 hover:text-white" title="Explore Public Servers">
-        <i class="fa-solid fa-compass text-xl"></i>
-      </div>
-      <div class="w-12 h-12 bg-[#313338] hover:bg-green-600 hover:rounded-2xl rounded-3xl flex items-center justify-center transition-all cursor-pointer text-green-500 hover:text-white" title="Add Server">
-        <i class="fa-solid fa-plus text-xl"></i>
-      </div>
-    </div>
-
-    <!-- 2. Direct Messages / Friends Channel Sidebar -->
-    <div class="w-60 bg-[#2b2d31] flex flex-col border-r border-[#1e1f22] flex-shrink-0">
-      <!-- Search Trigger -->
-      <div class="h-12 border-b border-[#1f2023] px-3 flex items-center">
-        <button onclick="switchTab('friends'); filterFriends('add')" class="w-full bg-[#1e1f22] text-gray-400 text-xs px-3 py-1.5 rounded text-left hover:text-gray-200 flex items-center justify-between">
-          <span>Find or add a friend</span>
-          <i class="fa-solid fa-magnifying-glass text-xs"></i>
-        </button>
-      </div>
-
-      <!-- Navigation Links -->
-      <div class="p-2 space-y-1 border-b border-[#1f2023]">
-        <button onclick="switchTab('friends')" id="navFriendsBtn" class="w-full flex items-center space-x-3 px-3 py-2 rounded text-gray-300 hover:bg-[#35373c] hover:text-white font-medium text-sm">
-          <i class="fa-solid fa-user-group text-gray-400 w-5"></i>
-          <span>Friends</span>
-        </button>
-      </div>
-
-      <!-- Direct Messages Section Header -->
-      <div class="px-4 pt-4 pb-1 flex justify-between items-center text-xs font-bold text-gray-400 uppercase">
-        <span>Direct Messages</span>
-        <i class="fa-solid fa-plus hover:text-white cursor-pointer" title="Add Friend" onclick="filterFriends('add')"></i>
-      </div>
-
-      <!-- Friends DM List -->
-      <div id="dmUserList" class="flex-1 overflow-y-auto px-2 space-y-0.5">
-        <div class="text-xs text-gray-500 p-3 text-center">Loading friends...</div>
-      </div>
-
-      <!-- Bottom User Profile & Audio Quick Bar -->
-      <div class="h-14 bg-[#232428] px-2 flex items-center justify-between border-t border-[#1e1f22]">
-        <div class="flex items-center space-x-2 truncate cursor-pointer hover:bg-[#313338] p-1 rounded" onclick="openDeviceSettings()">
-          <div class="relative">
-            <div class="w-8 h-8 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs" id="userAvatar">U</div>
-            <div class="w-3 h-3 bg-green-500 rounded-full absolute -bottom-0.5 -right-0.5 border-2 border-[#232428]"></div>
-          </div>
-          <div class="truncate text-xs">
-            <div id="currentUserName" class="font-semibold text-white leading-tight truncate">User</div>
-            <div id="currentUserTag" class="text-gray-400 text-[10px] leading-tight">#0000</div>
-          </div>
-        </div>
-
-        <div class="flex items-center space-x-1 text-gray-400">
-          <button id="micBtn" onclick="toggleMute()" class="w-7 h-7 hover:bg-[#35373c] hover:text-white rounded flex items-center justify-center" title="Mute/Unmute Mic">
-            <i class="fa-solid fa-microphone"></i>
-          </button>
-          <button id="deafenBtn" onclick="toggleDeafen()" class="w-7 h-7 hover:bg-[#35373c] hover:text-white rounded flex items-center justify-center" title="Deafen/Undeafen Audio">
-            <i class="fa-solid fa-headphones"></i>
-          </button>
-          <button onclick="openDeviceSettings()" class="w-7 h-7 hover:bg-[#35373c] hover:text-white rounded flex items-center justify-center" title="User Settings">
-            <i class="fa-solid fa-gear"></i>
-          </button>
-          <button onclick="handleSignOut()" class="w-7 h-7 hover:bg-red-900/40 hover:text-red-400 rounded flex items-center justify-center ml-1" title="Sign Out">
-            <i class="fa-solid fa-right-from-bracket"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. Dynamic Center View Pane -->
-    <div class="flex-1 flex flex-col bg-[#313338] relative">
-
-      <!-- ==================== FRIENDS MANAGEMENT TAB ==================== -->
-      <div id="friendsView" class="flex-1 flex flex-col">
-        <!-- Friends Top Header Bar -->
-        <div class="h-12 border-b border-[#1f2023] px-4 flex items-center space-x-6">
-          <div class="flex items-center space-x-2 text-white font-bold text-sm">
-            <i class="fa-solid fa-user-group text-gray-400"></i>
-            <span>Friends</span>
-          </div>
-          <div class="h-4 w-[1px] bg-[#3f4147]"></div>
-          <div class="flex items-center space-x-4 text-sm font-medium">
-            <button onclick="filterFriends('online')" id="tabOnlineFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded">Online</button>
-            <button onclick="filterFriends('all')" id="tabAllFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded">All</button>
-            <button onclick="filterFriends('pending')" id="tabPendingFriends" class="text-gray-300 hover:bg-[#35373c] hover:text-white px-2 py-1 rounded flex items-center space-x-1">
-              <span>Pending</span>
-              <span id="pendingBadge" class="hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">0</span>
-            </button>
-            <button onclick="filterFriends('add')" id="tabAddFriend" class="bg-green-600 text-white px-2.5 py-1 rounded hover:bg-green-700 font-semibold">Add Friend</button>
-          </div>
-        </div>
-
-        <!-- Friends Content Body -->
-        <div class="flex-1 p-6 overflow-y-auto space-y-6">
-          
-          <!-- Add Friend Panel -->
-          <div id="addFriendSection" class="max-w-xl space-y-4">
-            <h3 class="text-white font-bold text-base uppercase tracking-wide">Add Friend</h3>
-            <p class="text-xs text-gray-400">You can add friends by their exact Username#Tag (e.g. zed#1234) or by username (e.g. zed).</p>
-            <div class="flex items-center bg-[#1e1f22] p-3 rounded-lg border border-[#111214] focus-within:border-[#5865F2]">
-              <input id="friendTagInput" type="text" placeholder="Enter Username#Tag (e.g. zed#1234)" class="bg-transparent flex-1 text-sm text-white focus:outline-none" onkeydown="if(event.key === 'Enter') sendFriendRequest()">
-              <button onclick="sendFriendRequest()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-sm font-semibold transition">
-                Send Request
-              </button>
-            </div>
-            <!-- Dynamic Explicit Status Feedback -->
-            <div id="addFriendStatus" class="text-xs font-medium min-h-[20px]"></div>
-
-            <!-- Community Members Quick Suggestions -->
-            <div class="pt-4 space-y-3">
-              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Registered Users Directory</h4>
-              <div id="communityUserList" class="space-y-2">
-                <div class="text-xs text-gray-500">Loading registered users...</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Friends List Render Container -->
-          <div id="friendsListSection" class="mt-4">
-            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3" id="friendsSectionTitle">All Friends</div>
-            <div id="friendsContainer" class="space-y-2">
-              <!-- Rendered Dynamically -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ==================== DIRECT MESSAGES & WEBRTC CALL PANEL ==================== -->
-      <div id="chatView" class="flex-1 flex flex-col hidden">
-        
-        <!-- DM Header Bar -->
-        <div class="h-12 border-b border-[#1f2023] px-4 flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <span class="text-gray-400 font-bold text-lg">@</span>
-            <span id="activeChatUser" class="text-white font-bold text-sm">Select a Friend</span>
-            <span id="activeChatTag" class="text-gray-400 text-xs font-normal"></span>
-          </div>
-
-          <!-- Call Action Controls -->
-          <div class="flex items-center space-x-4 text-gray-300">
-            <button onclick="startCall(false)" title="Start Audio Call" class="hover:text-white text-lg"><i class="fa-solid fa-phone"></i></button>
-            <button onclick="startCall(true)" title="Start Video Call" class="hover:text-white text-lg"><i class="fa-solid fa-video"></i></button>
-          </div>
-        </div>
-
-        <!-- Active Call Overlay Panel (Displays during active call) -->
-        <div id="activeCallPanel" class="bg-[#111214] p-4 hidden border-b border-[#2b2d31] transition-all flex flex-col items-center shadow-inner">
-          <div class="text-xs text-gray-400 mb-2 flex items-center space-x-2">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span id="callStatusText">Call Connected</span>
-          </div>
-
-          <!-- Video Grids -->
-          <div class="flex flex-wrap justify-center gap-4 w-full max-w-4xl">
-            <!-- Local Stream (MUST BE MUTED to prevent echo feedback) -->
-            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800 shadow">
-              <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
-              <span class="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded">You</span>
-            </div>
-            <!-- Remote Stream (UNMUTED so peer audio is audible) -->
-            <div class="relative bg-black rounded-lg overflow-hidden w-72 h-48 border border-gray-800 shadow">
-              <video id="remoteVideo" autoplay playsinline class="w-full h-full object-cover"></video>
-              <span class="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded" id="remotePeerName">Peer</span>
-            </div>
-          </div>
-
-          <!-- In-Call Toolbar -->
-          <div class="flex items-center space-x-4 mt-4 bg-[#2b2d31] px-5 py-2.5 rounded-full shadow-lg">
-            <button id="callMicBtn" onclick="toggleMute()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Mute Mic">
-              <i class="fa-solid fa-microphone"></i>
-            </button>
-            <button id="callVideoBtn" onclick="toggleCamera()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Toggle Video">
-              <i class="fa-solid fa-video"></i>
-            </button>
-            <button id="screenShareBtn" onclick="toggleScreenShare()" class="w-10 h-10 rounded-full bg-[#313338] hover:bg-gray-700 flex items-center justify-center text-white" title="Share Screen">
-              <i class="fa-solid fa-desktop"></i>
-            </button>
-            <button onclick="endCall()" class="w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center text-white" title="End Call">
-              <i class="fa-solid fa-phone-slash"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Chat Message Log -->
-        <div id="messagesContainer" class="flex-1 p-4 overflow-y-auto space-y-4">
-          <!-- Direct Messages rendered dynamically -->
-        </div>
-
-        <!-- Chat Input Field -->
-        <div class="p-4">
-          <form onsubmit="sendMessage(event)" class="bg-[#383a40] rounded-lg px-4 py-2.5 flex items-center space-x-3">
-            <button type="button" class="text-gray-400 hover:text-white"><i class="fa-solid fa-circle-plus text-lg"></i></button>
-            <input id="messageInput" type="text" placeholder="Message @Friend" class="bg-transparent flex-1 text-sm text-white focus:outline-none placeholder-gray-500">
-            <button type="submit" class="text-[#5865F2] hover:text-indigo-400 font-bold"><i class="fa-solid fa-paper-plane text-lg"></i></button>
-          </form>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ==================== DEVICE SETTINGS MODAL ==================== -->
-  <div id="deviceSettingsModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#313338] w-full max-w-lg rounded-lg p-6 space-y-5 shadow-2xl border border-[#2b2d31]">
-      <div class="flex justify-between items-center border-b border-[#3f4147] pb-3">
-        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-sliders mr-2"></i> Voice & Video Settings</h3>
-        <button onclick="closeDeviceSettings()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-      </div>
-
-      <!-- Microphone Input Selector -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Input Device (Microphone)</label>
-        <select id="audioInputSelect" onchange="switchAudioDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
-      </div>
-
-      <!-- Audio Output Selector -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Output Device (Speakers / Headphones)</label>
-        <select id="audioOutputSelect" onchange="switchAudioOutputDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
-      </div>
-
-      <!-- Video Camera Selector -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-bold uppercase tracking-wider text-gray-300">Video Camera</label>
-        <select id="videoInputSelect" onchange="switchVideoDevice()" class="w-full bg-[#1e1f22] text-white text-sm p-3 rounded border border-[#2b2d31] focus:outline-none focus:ring-2 focus:ring-[#5865F2]"></select>
-      </div>
-
-      <div class="flex justify-end pt-3">
-        <button onclick="closeDeviceSettings()" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-5 py-2 rounded text-sm font-semibold">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== MAIN JAVASCRIPT APP LOGIC ==================== -->
-  <script>
-    // Supabase Client Config
-    const SUPABASE_URL = "https://duzdubrqkkpgqljbnrlp.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1emR1YnJxa2twZ3FsamJucmxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MzQ2NzIsImV4cCI6MjEwOTAxMDY3Mn0.K_KNICMsQxFHPZ6snlNMqjPXc8mvoVhroeXlg-PLBHQ";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Global State
-    let authMode = 'signin';
-    let currentUser = null; // Profile record from public.profiles
-    let activeFriend = null; // Selected friend profile for DM
-    let friendsList = [];
-    let pendingRequests = [];
-    let communityUsers = [];
-
-    // Audio & Call States
-    let isMuted = false;
-    let isDeafened = false;
-    let isVideoOn = true;
-    let isScreenSharing = false;
-
-    // WebRTC & Media Globals
-    let localStream = null;
-    let peerConnection = null;
-    let signalingChannel = null;
-    let iceCandidateQueue = [];
-    let currentIncomingPayload = null;
-
-    // Public STUN Configuration
-    const rtcConfig = {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" }
-      ]
-    };
-
-    // ==================== AUTHENTICATION LOGIC ====================
-
-    function switchAuthTab(mode) {
-      authMode = mode;
-      const tabIn = document.getElementById('tabSignIn');
-      const tabUp = document.getElementById('tabSignUp');
-      const uField = document.getElementById('usernameField');
-      const title = document.getElementById('authTitle');
-      const btnText = document.getElementById('authBtnText');
-
-      if (mode === 'signup') {
-        tabUp.className = "flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]";
-        tabIn.className = "flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent";
-        uField.classList.remove('hidden');
-        title.innerText = "Create an Account";
-        btnText.innerText = "Register";
-      } else {
-        tabIn.className = "flex-1 py-2 text-center text-white border-b-2 border-[#5865F2]";
-        tabUp.className = "flex-1 py-2 text-center text-gray-400 hover:text-gray-200 border-b-2 border-transparent";
-        uField.classList.add('hidden');
-        title.innerText = "Welcome Back!";
-        btnText.innerText = "Sign In";
-      }
-    }
-
-    async function handleAuthSubmit(e) {
-      e.preventDefault();
-      const email = document.getElementById('authEmailInput').value.trim();
-      const password = document.getElementById('authPasswordInput').value;
-      const username = document.getElementById('authUsernameInput').value.trim();
-      const errEl = document.getElementById('authErrorMsg');
-      const spinner = document.getElementById('authSpinner');
-
-      errEl.classList.add('hidden');
-      errEl.innerText = "";
-      spinner.classList.remove('hidden');
-
-      try {
-        if (authMode === 'signup') {
-          if (!username) throw new Error("Please enter a username.");
-
-          const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
-            email,
-            password
-          });
-          if (authErr) throw authErr;
-
-          if (authData.user) {
-            const randomTag = Math.floor(1000 + Math.random() * 9000).toString();
-
-            const { data: newProfile, error: profErr } = await supabaseClient
-              .from('profiles')
-              .insert([{ id: authData.user.id, username, tag: randomTag }])
-              .select()
-              .single();
-
-            if (profErr) throw profErr;
-            currentUser = newProfile;
-          }
-        } else {
-          const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
-            email,
-            password
-          });
-          if (authErr) throw authErr;
-
-          if (authData.user) {
-            const { data: profile, error: profErr } = await supabaseClient
-              .from('profiles')
-              .select('*')
-              .eq('id', authData.user.id)
-              .maybeSingle();
-
-            if (profErr || !profile) throw new Error("Profile record not found.");
-            currentUser = profile;
-          }
+        // ==========================================
+        // 2. UI MODAL & VIEW CONTROLLERS
+        // ==========================================
+        function showModal(title, msg) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = msg;
+            document.getElementById('customModal').classList.remove('hidden');
         }
 
-        initializeUserApp();
-
-      } catch (err) {
-        console.error("Auth Error:", err);
-        errEl.innerText = err.message || "Authentication failed. Check credentials.";
-        errEl.classList.remove('hidden');
-      } finally {
-        spinner.classList.add('hidden');
-      }
-    }
-
-    async function handleSignOut() {
-      await supabaseClient.auth.signOut();
-      currentUser = null;
-      document.getElementById('authModal').classList.remove('hidden');
-    }
-
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && !currentUser) {
-        const { data: profile } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profile) {
-          currentUser = profile;
-          initializeUserApp();
+        function closeModal() {
+            document.getElementById('customModal').classList.add('hidden');
         }
-      }
-    });
 
-    function initializeUserApp() {
-      document.getElementById('currentUserName').innerText = currentUser.username;
-      document.getElementById('currentUserTag').innerText = `#${currentUser.tag}`;
-      document.getElementById('userAvatar').innerText = currentUser.username[0].toUpperCase();
+        function switchView(viewId) {
+            document.getElementById('lobbyScreen').classList.add('hidden');
+            document.getElementById('roomLobbyScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
 
-      document.getElementById('authModal').classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+        }
 
-      loadFriends();
-      loadCommunityUsers();
-      setupRealtimeSubscriptions();
-      initAudioVideoDevices();
-    }
-
-    // ==================== REALTIME SUBSCRIPTIONS & WEBRTC SIGNALING ====================
-
-    function setupRealtimeSubscriptions() {
-      // Direct Messaging Channel
-      supabaseClient
-        .channel('public:messages')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-          const msg = payload.new;
-          if (activeFriend && (msg.sender_id === activeFriend.id || msg.receiver_id === activeFriend.id)) {
-            appendMessage(msg);
-          }
-        })
-        .subscribe();
-
-      // Friends Status Sync Channel
-      supabaseClient
-        .channel('public:friends')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'friends' }, () => {
-          loadFriends();
-        })
-        .subscribe();
-
-      // Dedicated WebRTC Signaling Broadcast Channel
-      signalingChannel = supabaseClient.channel('global_webrtc_signaling');
-      signalingChannel
-        .on('broadcast', { event: 'signal' }, async ({ payload }) => {
-          if (payload.targetId !== currentUser.id) return;
-
-          console.log("Received WebRTC Signal:", payload.type);
-
-          if (payload.type === 'offer') {
-            currentIncomingPayload = payload;
-            showIncomingCallModal(payload);
-
-          } else if (payload.type === 'answer') {
-            if (peerConnection) {
-              await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-              processIceQueue();
+        // ==========================================
+        // 3. ROOM MANAGEMENT & SUPABASE LOBBY LOGIC
+        // ==========================================
+        async function createRoom() {
+            const nickInput = document.getElementById('nicknameInput').value.trim();
+            if (!nickInput) {
+                showModal("Nickname Required", "Please enter a nickname before creating a room.");
+                return;
             }
-          } else if (payload.type === 'candidate') {
-            if (peerConnection && peerConnection.remoteDescription) {
-              await peerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            myNickname = nickInput;
+
+            // Generate 4-digit code
+            const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+            try {
+                // Insert room record
+                const { error: roomErr } = await supabaseClient
+                    .from('rooms')
+                    .insert([{ code: roomCode, host_id: playerId, status: 'waiting' }]);
+
+                if (roomErr) throw roomErr;
+
+                // Insert host player record
+                const { error: playerErr } = await supabaseClient
+                    .from('players')
+                    .insert([{ id: playerId, room_code: roomCode, nickname: myNickname, is_host: true, status: 'alive' }]);
+
+                if (playerErr) throw playerErr;
+
+                currentRoomCode = roomCode;
+                isHost = true;
+                joinRoomView();
+            } catch (err) {
+                console.error(err);
+                showModal("Error", "Failed to create room. Please try again.");
+            }
+        }
+
+        async function joinRoom() {
+            const nickInput = document.getElementById('nicknameInput').value.trim();
+            const codeInput = document.getElementById('roomCodeInput').value.trim();
+
+            if (!nickInput) {
+                showModal("Nickname Required", "Please enter a nickname.");
+                return;
+            }
+            if (codeInput.length !== 4) {
+                showModal("Invalid Code", "Please enter a valid 4-digit room code.");
+                return;
+            }
+
+            myNickname = nickInput;
+
+            try {
+                // Verify room exists and is in waiting state
+                const { data: room, error: roomErr } = await supabaseClient
+                    .from('rooms')
+                    .select('*')
+                    .eq('code', codeInput)
+                    .single();
+
+                if (roomErr || !room) {
+                    showModal("Room Not Found", "No active room found with that code.");
+                    return;
+                }
+
+                if (room.status !== 'waiting') {
+                    showModal("Game In Progress", "This room has already started a match.");
+                    return;
+                }
+
+                // Check player count
+                const { data: players } = await supabaseClient
+                    .from('players')
+                    .select('*')
+                    .eq('room_code', codeInput);
+
+                if (players && players.length >= 4) {
+                    showModal("Room Full", "This room already has 4 players.");
+                    return;
+                }
+
+                // Insert player record
+                const { error: insertErr } = await supabaseClient
+                    .from('players')
+                    .insert([{ id: playerId, room_code: codeInput, nickname: myNickname, is_host: false, status: 'alive' }]);
+
+                if (insertErr) throw insertErr;
+
+                currentRoomCode = codeInput;
+                isHost = false;
+                joinRoomView();
+            } catch (err) {
+                console.error(err);
+                showModal("Error", "Failed to join room.");
+            }
+        }
+
+        function joinRoomView() {
+            document.getElementById('displayRoomCode').innerText = currentRoomCode;
+            switchView('roomLobbyScreen');
+            subscribeToRoomEvents();
+            fetchRoomPlayers();
+            fetchChatMessages();
+        }
+
+        async function leaveRoom() {
+            if (currentRoomCode) {
+                await supabaseClient.from('players').delete().eq('id', playerId);
+                if (isHost) {
+                    await supabaseClient.from('rooms').delete().eq('code', currentRoomCode);
+                }
+            }
+            if (realtimeSubscription) {
+                supabaseClient.removeChannel(realtimeSubscription);
+            }
+            currentRoomCode = null;
+            isHost = false;
+            switchView('lobbyScreen');
+        }
+
+        async function fetchRoomPlayers() {
+            if (!currentRoomCode) return;
+            const { data } = await supabaseClient
+                .from('players')
+                .select('*')
+                .eq('room_code', currentRoomCode);
+            
+            if (data) {
+                roomPlayers = data;
+                updateLobbyPlayerUI();
+            }
+        }
+
+        function updateLobbyPlayerUI() {
+            const playerList = document.getElementById('playerList');
+            const playerCount = document.getElementById('playerCount');
+            const startBtn = document.getElementById('startGameBtn');
+            const waitingMsg = document.getElementById('waitingHostMsg');
+
+            playerCount.innerText = `${roomPlayers.length}/4`;
+            playerList.innerHTML = '';
+
+            roomPlayers.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between";
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-white">${p.nickname} ${p.id === playerId ? '<span class="text-xs text-yellow-400">(You)</span>' : ''}</p>
+                            ${p.is_host ? '<span class="text-[10px] font-arcade text-pink-400">HOST</span>' : '<span class="text-[10px] text-slate-500">PLAYER</span>'}
+                        </div>
+                    </div>
+                    <span class="w-2.5 h-2.5 rounded-full ${p.status === 'alive' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                `;
+                playerList.appendChild(card);
+            });
+
+            // Host controls
+            if (isHost) {
+                startBtn.classList.remove('hidden');
+                waitingMsg.classList.add('hidden');
             } else {
-              iceCandidateQueue.push(payload.candidate);
+                startBtn.classList.add('hidden');
+                waitingMsg.classList.remove('hidden');
             }
-          } else if (payload.type === 'hangup') {
-            closeCallUI();
-          }
-        })
-        .subscribe();
-    }
+        }
 
-    // ==================== WEBRTC CALL HANDLERS ====================
+        // ==========================================
+        // 4. CHAT SYSTEM
+        // ==========================================
+        async function sendChatMessage(inputId) {
+            const input = document.getElementById(inputId);
+            const msg = input.value.trim();
+            if (!msg || !currentRoomCode) return;
 
-    async function startCall(videoEnabled = false) {
-      if (!activeFriend) return;
+            input.value = '';
+            await supabaseClient.from('chat_messages').insert([
+                { room_code: currentRoomCode, sender_name: myNickname, message: msg }
+            ]);
+        }
 
-      document.getElementById('activeCallPanel').classList.remove('hidden');
-      document.getElementById('callStatusText').innerText = `Calling ${activeFriend.username}...`;
-      document.getElementById('remotePeerName').innerText = activeFriend.username;
-      iceCandidateQueue = [];
+        async function fetchChatMessages() {
+            if (!currentRoomCode) return;
+            const { data } = await supabaseClient
+                .from('chat_messages')
+                .select('*')
+                .eq('room_code', currentRoomCode)
+                .order('created_at', { ascending: true })
+                .limit(50);
 
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: videoEnabled
-        });
-
-        document.getElementById('localVideo').srcObject = localStream;
-        setupPeerConnection();
-
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-
-        signalingChannel.send({
-          type: 'broadcast',
-          event: 'signal',
-          payload: {
-            targetId: activeFriend.id,
-            callerId: currentUser.id,
-            callerName: currentUser.username,
-            type: 'offer',
-            sdp: offer,
-            isVideo: videoEnabled
-          }
-        });
-
-      } catch (err) {
-        console.error("Media error starting call:", err);
-        alert("Failed to access camera/microphone. Please check permissions.");
-        closeCallUI();
-      }
-    }
-
-    function showIncomingCallModal(payload) {
-      document.getElementById('incomingCallerName').innerText = payload.callerName || "Friend";
-      document.getElementById('incomingCallerAvatar').innerText = (payload.callerName || "U")[0].toUpperCase();
-      document.getElementById('incomingCallType').innerText = payload.isVideo ? "Incoming Video Call..." : "Incoming Voice Call...";
-      document.getElementById('incomingCallModal').classList.remove('hidden');
-    }
-
-    async function acceptIncomingCall(withVideo = true) {
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      if (!currentIncomingPayload) return;
-
-      const payload = currentIncomingPayload;
-      document.getElementById('activeCallPanel').classList.remove('hidden');
-      document.getElementById('callStatusText').innerText = `Connecting...`;
-      document.getElementById('remotePeerName').innerText = payload.callerName || "Peer";
-      iceCandidateQueue = [];
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: withVideo
-        });
-        document.getElementById('localVideo').srcObject = localStream;
-
-        setupPeerConnection();
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-        processIceQueue();
-
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-
-        signalingChannel.send({
-          type: 'broadcast',
-          event: 'signal',
-          payload: {
-            targetId: payload.callerId,
-            callerId: currentUser.id,
-            type: 'answer',
-            sdp: answer
-          }
-        });
-
-      } catch (err) {
-        console.error("Error accepting call:", err);
-        closeCallUI();
-      }
-    }
-
-    function rejectIncomingCall() {
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      if (currentIncomingPayload) {
-        signalingChannel.send({
-          type: 'broadcast',
-          event: 'signal',
-          payload: {
-            targetId: currentIncomingPayload.callerId,
-            type: 'hangup'
-          }
-        });
-      }
-      currentIncomingPayload = null;
-    }
-
-    function setupPeerConnection() {
-      peerConnection = new RTCPeerConnection(rtcConfig);
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate && activeFriend) {
-          signalingChannel.send({
-            type: 'broadcast',
-            event: 'signal',
-            payload: {
-              targetId: activeFriend.id,
-              type: 'candidate',
-              candidate: event.candidate
+            if (data) {
+                renderChatMessages(data);
             }
-          });
         }
-      };
 
-      peerConnection.ontrack = (event) => {
-        const remoteVid = document.getElementById('remoteVideo');
-        if (remoteVid.srcObject !== event.streams[0]) {
-          remoteVid.srcObject = event.streams[0];
-          document.getElementById('callStatusText').innerText = `Call Active`;
+        function renderChatMessages(messages) {
+            const lobbyBox = document.getElementById('lobbyChatBox');
+            const gameBox = document.getElementById('inGameChatBox');
+            
+            const html = messages.map(m => `
+                <div class="bg-slate-900/60 p-2 rounded border border-slate-800">
+                    <span class="font-bold text-cyan-400">${m.sender_name}:</span> 
+                    <span class="text-slate-200">${m.message}</span>
+                </div>
+            `).join('');
+
+            if (lobbyBox) { lobbyBox.innerHTML = html; lobbyBox.scrollTop = lobbyBox.scrollHeight; }
+            if (gameBox) { gameBox.innerHTML = html; gameBox.scrollTop = gameBox.scrollHeight; }
         }
-      };
-    }
 
-    async function processIceQueue() {
-      while (iceCandidateQueue.length > 0) {
-        const cand = iceCandidateQueue.shift();
-        try {
-          await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
-        } catch (e) {
-          console.warn("ICE candidate error:", e);
+        // ==========================================
+        // 5. SUPABASE REALTIME SUBSCRIPTIONS
+        // ==========================================
+        function subscribeToRoomEvents() {
+            if (realtimeSubscription) supabaseClient.removeChannel(realtimeSubscription);
+
+            realtimeSubscription = supabaseClient
+                .channel(`room_${currentRoomCode}`)
+                // Watch for player changes
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `room_code=eq.${currentRoomCode}` }, () => {
+                    fetchRoomPlayers();
+                })
+                // Watch for room state changes (Match Start)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `code=eq.${currentRoomCode}` }, (payload) => {
+                    if (payload.new && payload.new.status === 'playing' && !inGame) {
+                        triggerStartCountdown();
+                    }
+                })
+                // Watch for chat updates
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room_code=eq.${currentRoomCode}` }, () => {
+                    fetchChatMessages();
+                })
+                .subscribe();
         }
-      }
-    }
 
-    function endCall() {
-      if (activeFriend) {
-        signalingChannel.send({
-          type: 'broadcast',
-          event: 'signal',
-          payload: { targetId: activeFriend.id, type: 'hangup' }
-        });
-      }
-      closeCallUI();
-    }
-
-    function closeCallUI() {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-      document.getElementById('localVideo').srcObject = null;
-      document.getElementById('remoteVideo').srcObject = null;
-      document.getElementById('activeCallPanel').classList.add('hidden');
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      currentIncomingPayload = null;
-    }
-
-    async function toggleScreenShare() {
-      if (!peerConnection) return;
-
-      if (!isScreenSharing) {
-        try {
-          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          const screenTrack = screenStream.getVideoTracks()[0];
-
-          const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) {
-            sender.replaceTrack(screenTrack);
-          } else {
-            peerConnection.addTrack(screenTrack, screenStream);
-          }
-
-          document.getElementById('localVideo').srcObject = screenStream;
-          isScreenSharing = true;
-
-          screenTrack.onended = () => {
-            toggleScreenShare();
-          };
-        } catch (err) {
-          console.error("Screen share error:", err);
+        async function requestStartGame() {
+            if (!isHost || !currentRoomCode) return;
+            await supabaseClient
+                .from('rooms')
+                .update({ status: 'playing' })
+                .eq('code', currentRoomCode);
         }
-      } else {
-        if (localStream && localStream.getVideoTracks().length > 0) {
-          const videoTrack = localStream.getVideoTracks()[0];
-          const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) sender.replaceTrack(videoTrack);
-          document.getElementById('localVideo').srcObject = localStream;
+
+        // ==========================================
+        // 6. GAME START COUNTDOWN & SETUP
+        // ==========================================
+        function triggerStartCountdown() {
+            switchView('gameScreen');
+            document.getElementById('myNickDisplay').innerText = myNickname;
+            document.getElementById('countdownOverlay').classList.remove('hidden');
+
+            setupOpponentsContainer();
+
+            let count = 3;
+            const countElem = document.getElementById('countdownText');
+            countElem.innerText = count;
+
+            const interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countElem.innerText = count;
+                } else {
+                    clearInterval(interval);
+                    document.getElementById('countdownOverlay').classList.add('hidden');
+                    startBubbleGameEngine();
+                }
+            }, 1000);
         }
-        isScreenSharing = false;
-      }
-    }
 
-    function toggleCamera() {
-      isVideoOn = !isVideoOn;
-      if (localStream) {
-        localStream.getVideoTracks().forEach(t => t.enabled = isVideoOn);
-      }
-      const btn = document.getElementById('callVideoBtn');
-      if (btn) {
-        btn.innerHTML = isVideoOn ? `<i class="fa-solid fa-video"></i>` : `<i class="fa-solid fa-video-slash text-red-500"></i>`;
-      }
-    }
+        function setupOpponentsContainer() {
+            const container = document.getElementById('opponentsContainer');
+            container.innerHTML = '';
 
-    function toggleMute() {
-      isMuted = !isMuted;
-      if (localStream) {
-        localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
-      }
-      const micBtns = [document.getElementById('micBtn'), document.getElementById('callMicBtn')];
-      micBtns.forEach(btn => {
-        if (!btn) return;
-        btn.innerHTML = isMuted ? `<i class="fa-solid fa-microphone-slash text-red-500"></i>` : `<i class="fa-solid fa-microphone"></i>`;
-      });
-    }
-
-    function toggleDeafen() {
-      isDeafened = !isDeafened;
-      const remoteVideo = document.getElementById('remoteVideo');
-      if (remoteVideo) remoteVideo.muted = isDeafened;
-
-      const deafenBtn = document.getElementById('deafenBtn');
-      if (deafenBtn) {
-        deafenBtn.innerHTML = isDeafened ? `<i class="fa-solid fa-ear-deaf text-red-500"></i>` : `<i class="fa-solid fa-headphones"></i>`;
-      }
-    }
-
-    // ==================== FRIENDS MANAGEMENT ====================
-
-    async function loadFriends() {
-      if (!currentUser) return;
-
-      const { data, error } = await supabaseClient
-        .from('friends')
-        .select(`
-          id, status, user_id, friend_id,
-          sender:profiles!user_id(*),
-          receiver:profiles!friend_id(*)
-        `)
-        .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`);
-
-      if (error) {
-        const { data: altData } = await supabaseClient
-          .from('friends')
-          .select(`
-            id, status, sender_id, receiver_id,
-            sender:profiles!friends_sender_id_fkey(*),
-            receiver:profiles!friends_receiver_id_fkey(*)
-          `)
-          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
-        processFriendsData(altData, true);
-        return;
-      }
-
-      processFriendsData(data, false);
-    }
-
-    function processFriendsData(data, isAlt = false) {
-      friendsList = [];
-      pendingRequests = [];
-
-      if (!data) return;
-
-      data.forEach(rel => {
-        const myIdCol = isAlt ? rel.sender_id : rel.user_id;
-        const isSender = myIdCol === currentUser.id;
-        const friendProfile = isSender ? rel.receiver : rel.sender;
-
-        if (friendProfile) {
-          if (rel.status === 'accepted') {
-            friendsList.push(friendProfile);
-          } else if (rel.status === 'pending') {
-            pendingRequests.push({ ...friendProfile, requestId: rel.id, isIncoming: !isSender });
-          }
+            const opponents = roomPlayers.filter(p => p.id !== playerId);
+            opponents.forEach(op => {
+                const box = document.createElement('div');
+                box.className = "bg-slate-950 border border-slate-800 rounded-lg p-2 flex flex-col items-center";
+                box.innerHTML = `
+                    <div class="flex justify-between w-full text-[10px] font-arcade mb-1">
+                        <span class="text-cyan-400 truncate max-w-[80px]">${op.nickname}</span>
+                        <span id="oppScore_${op.id}" class="text-yellow-400">0</span>
+                    </div>
+                    <canvas id="oppCanvas_${op.id}" width="160" height="220" class="bg-slate-900 border border-slate-800 rounded"></canvas>
+                `;
+                container.appendChild(box);
+            });
         }
-      });
 
-      renderDMList();
-      renderFriendsView('all');
-    }
+        // ==========================================
+        // 7. CANVAS PUZZLE BOBBLE GAME ENGINE
+        // ==========================================
+        let canvas, ctx;
+        let gameLoopId = null;
+        let pushTimerId = null;
+        let gameActive = false;
 
-    async function loadCommunityUsers() {
-      const { data } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .neq('id', currentUser.id)
-        .limit(10);
+        // Bubble Physics Grid Configuration
+        const GRID_ROWS = 12;
+        const GRID_COLS = 8;
+        const BUBBLE_RADIUS = 20;
+        const BUBBLE_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#eab308', '#a855f7']; // Red, Blue, Green, Yellow, Purple
 
-      communityUsers = data || [];
-      renderCommunityUsers();
-    }
+        let grid = [];
+        let cannonAngle = Math.PI / 2; // Pointing straight up
+        let currentBubble = null;
+        let nextBubble = null;
+        let firedBubble = null;
+        let playerScore = 0;
+        let pushInterval = 12000; // Drops row every 12s, decreases over time
+        let speedLevel = 1;
 
-    function renderCommunityUsers() {
-      const container = document.getElementById('communityUserList');
-      if (!container) return;
+        function startBubbleGameEngine() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Mouse aiming controls
+            canvas.onmousemove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const dx = mouseX - (canvas.width / 2);
+                const dy = (canvas.height - 30) - mouseY;
+                if (dy > 10) {
+                    cannonAngle = Math.atan2(dy, dx);
+                }
+            };
 
-      if (communityUsers.length === 0) {
-        container.innerHTML = `<div class="text-xs text-gray-500">No other users registered yet.</div>`;
-        return;
-      }
+            // Touch aiming controls
+            canvas.ontouchmove = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const mouseX = touch.clientX - rect.left;
+                const mouseY = touch.clientY - rect.top;
+                const dx = mouseX - (canvas.width / 2);
+                const dy = (canvas.height - 30) - mouseY;
+                if (dy > 10) {
+                    cannonAngle = Math.atan2(dy, dx);
+                }
+            };
 
-      container.innerHTML = communityUsers.map(u => `
-        <div class="flex items-center justify-between p-2 bg-[#2b2d31] rounded border border-[#1f2023]">
-          <div class="flex items-center space-x-2">
-            <div class="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white text-xs">
-              ${u.username[0].toUpperCase()}
-            </div>
-            <span class="text-xs font-semibold text-white">${u.username}<span class="text-gray-400 font-normal">#${u.tag}</span></span>
-          </div>
-          <button onclick="addFriendByTag('${u.username}#${u.tag}')" class="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs px-2.5 py-1 rounded">
-            + Add Friend
-          </button>
-        </div>
-      `).join('');
-    }
+            // Shoot bubble click/tap
+            canvas.onclick = fireBubble;
+            canvas.ontouchend = fireBubble;
 
-    function addFriendByTag(tag) {
-      document.getElementById('friendTagInput').value = tag;
-      sendFriendRequest();
-    }
+            initGrid();
+            playerScore = 0;
+            speedLevel = 1;
+            pushInterval = 12000;
+            document.getElementById('myScoreDisplay').innerText = '0';
+            document.getElementById('speedLevelDisplay').innerText = '1';
 
-    async function sendFriendRequest() {
-      const input = document.getElementById('friendTagInput').value.trim();
-      const statusEl = document.getElementById('addFriendStatus');
-      statusEl.innerText = "";
-      statusEl.className = "text-xs font-medium min-h-[20px]";
+            currentBubble = createRandomBubble();
+            nextBubble = createRandomBubble();
+            firedBubble = null;
+            gameActive = true;
 
-      if (!input) {
-        statusEl.innerText = "Please enter a username or Username#Tag";
-        statusEl.classList.add("text-red-400");
-        return;
-      }
+            // Start drop push interval
+            scheduleRowPush();
 
-      let targetProfile = null;
-
-      if (input.includes('#')) {
-        const [uname, tag] = input.split('#');
-        const { data } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .ilike('username', uname.trim())
-          .eq('tag', tag.trim())
-          .maybeSingle();
-
-        targetProfile = data;
-      } else {
-        const { data } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .ilike('username', input)
-          .maybeSingle();
-
-        targetProfile = data;
-      }
-
-      if (!targetProfile) {
-        statusEl.innerText = "User not found. Make sure you entered exact Username#Tag (e.g. zed#1234).";
-        statusEl.classList.add("text-red-400");
-        return;
-      }
-
-      if (targetProfile.id === currentUser.id) {
-        statusEl.innerText = "You cannot add yourself as a friend.";
-        statusEl.classList.add("text-red-400");
-        return;
-      }
-
-      const isAlreadyFriend = friendsList.some(f => f.id === targetProfile.id);
-      if (isAlreadyFriend) {
-        statusEl.innerText = `You are already friends with ${targetProfile.username}#${targetProfile.tag}.`;
-        statusEl.classList.add("text-yellow-400");
-        return;
-      }
-
-      const pendingCheck = pendingRequests.find(p => p.id === targetProfile.id);
-      if (pendingCheck) {
-        if (pendingCheck.isIncoming) {
-          statusEl.innerText = `${targetProfile.username}#${targetProfile.tag} has already sent you a friend request! Check your Pending tab to accept.`;
-        } else {
-          statusEl.innerText = `Friend request already sent to ${targetProfile.username}#${targetProfile.tag} (Pending).`;
+            // Run Loop
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            gameLoop();
         }
-        statusEl.classList.add("text-yellow-400");
-        return;
-      }
 
-      const { error: sendErr } = await supabaseClient.from('friends').insert([{
-        user_id: currentUser.id,
-        friend_id: targetProfile.id,
-        status: 'pending'
-      }]);
-
-      if (sendErr) {
-        await supabaseClient.from('friends').insert([{
-          sender_id: currentUser.id,
-          receiver_id: targetProfile.id,
-          status: 'pending'
-        }]);
-      }
-
-      statusEl.innerText = `Friend request sent to ${targetProfile.username}#${targetProfile.tag}!`;
-      statusEl.classList.add("text-green-400");
-      document.getElementById('friendTagInput').value = '';
-      await loadFriends();
-    }
-
-    async function acceptFriendRequest(requestId) {
-      await supabaseClient
-        .from('friends')
-        .update({ status: 'accepted' })
-        .eq('id', requestId);
-
-      await loadFriends();
-    }
-
-    async function rejectFriendRequest(requestId) {
-      await supabaseClient
-        .from('friends')
-        .delete()
-        .eq('id', requestId);
-
-      await loadFriends();
-    }
-
-    // ==================== REALTIME CHAT MESSAGING ====================
-
-    async function openChat(friend) {
-      activeFriend = friend;
-      document.getElementById('friendsView').classList.add('hidden');
-      document.getElementById('chatView').classList.remove('hidden');
-
-      document.getElementById('activeChatUser').innerText = friend.username;
-      document.getElementById('activeChatTag').innerText = `#${friend.tag}`;
-      document.getElementById('messagesContainer').innerHTML = `<div class="text-xs text-gray-500 text-center py-4">Loading messages...</div>`;
-
-      const { data: history } = await supabaseClient
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${currentUser.id})`)
-        .order('created_at', { ascending: true });
-
-      const container = document.getElementById('messagesContainer');
-      container.innerHTML = "";
-
-      if (history && history.length > 0) {
-        history.forEach(appendMessage);
-      } else {
-        container.innerHTML = `
-          <div class="text-center py-8 space-y-2">
-            <div class="w-16 h-16 bg-[#5865F2] rounded-full flex items-center justify-center mx-auto text-2xl font-bold text-white">
-              ${friend.username[0].toUpperCase()}
-            </div>
-            <h3 class="text-xl font-bold text-white">${friend.username}</h3>
-            <p class="text-xs text-gray-400">This is the beginning of your direct message history with ${friend.username}#${friend.tag}.</p>
-          </div>
-        `;
-      }
-    }
-
-    async function sendMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if (!text || !activeFriend) return;
-
-      input.value = "";
-
-      await supabaseClient.from('messages').insert([{
-        sender_id: currentUser.id,
-        receiver_id: activeFriend.id,
-        content: text
-      }]);
-    }
-
-    function appendMessage(msg) {
-      const container = document.getElementById('messagesContainer');
-      const isMe = msg.sender_id === currentUser.id;
-      const senderName = isMe ? currentUser.username : activeFriend.username;
-      const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const msgDiv = document.createElement('div');
-      msgDiv.className = "flex items-start space-x-3 hover:bg-[#2b2d31]/40 p-1.5 rounded transition";
-      msgDiv.innerHTML = `
-        <div class="w-9 h-9 ${isMe ? 'bg-[#5865F2]' : 'bg-emerald-600'} rounded-full flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
-          ${senderName[0].toUpperCase()}
-        </div>
-        <div class="flex-1">
-          <div class="flex items-center space-x-2">
-            <span class="text-xs font-bold text-white">${senderName}</span>
-            <span class="text-[10px] text-gray-400">${time}</span>
-          </div>
-          <div class="text-sm text-gray-200 mt-0.5 break-all">${escapeHtml(msg.content)}</div>
-        </div>
-      `;
-      container.appendChild(msgDiv);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // ==================== HARDWARE DEVICE SELECTOR ====================
-
-    async function initAudioVideoDevices() {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioIn = document.getElementById('audioInputSelect');
-        const audioOut = document.getElementById('audioOutputSelect');
-        const videoIn = document.getElementById('videoInputSelect');
-
-        audioIn.innerHTML = "";
-        audioOut.innerHTML = "";
-        videoIn.innerHTML = "";
-
-        devices.forEach((device, idx) => {
-          const opt = document.createElement('option');
-          opt.value = device.deviceId;
-          opt.text = device.label || `${device.kind} (${idx + 1})`;
-
-          if (device.kind === 'audioinput') audioIn.appendChild(opt);
-          else if (device.kind === 'audiooutput') audioOut.appendChild(opt);
-          else if (device.kind === 'videoinput') videoIn.appendChild(opt);
-        });
-      } catch (err) {
-        console.warn("Media devices enumeration error:", err);
-      }
-    }
-
-    async function switchAudioDevice() {
-      const deviceId = document.getElementById('audioInputSelect').value;
-      if (!localStream) return;
-      const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
-      const audioTrack = newStream.getAudioTracks()[0];
-      const sender = peerConnection?.getSenders().find(s => s.track && s.track.kind === 'audio');
-      if (sender) sender.replaceTrack(audioTrack);
-    }
-
-    async function switchAudioOutputDevice() {
-      const deviceId = document.getElementById('audioOutputSelect').value;
-      const remoteVideo = document.getElementById('remoteVideo');
-      if (remoteVideo && typeof remoteVideo.setSinkId === 'function') {
-        await remoteVideo.setSinkId(deviceId);
-      }
-    }
-
-    async function switchVideoDevice() {
-      const deviceId = document.getElementById('videoInputSelect').value;
-      if (!localStream) return;
-      const newStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } } });
-      const videoTrack = newStream.getVideoTracks()[0];
-      const sender = peerConnection?.getSenders().find(s => s.track && s.track.kind === 'video');
-      if (sender) sender.replaceTrack(videoTrack);
-      document.getElementById('localVideo').srcObject = newStream;
-    }
-
-    function openDeviceSettings() {
-      initAudioVideoDevices();
-      document.getElementById('deviceSettingsModal').classList.remove('hidden');
-    }
-
-    function closeDeviceSettings() {
-      document.getElementById('deviceSettingsModal').classList.add('hidden');
-    }
-
-    // ==================== UI NAVIGATION HELPERS ====================
-
-    function renderDMList() {
-      const container = document.getElementById('dmUserList');
-      container.innerHTML = "";
-
-      if (friendsList.length === 0) {
-        container.innerHTML = `<div class="text-xs text-gray-500 p-3 text-center">No active friends yet.</div>`;
-        return;
-      }
-
-      friendsList.forEach(friend => {
-        const item = document.createElement('div');
-        item.className = "flex items-center space-x-3 px-2 py-2 rounded-md hover:bg-[#35373c] cursor-pointer text-gray-300 hover:text-white transition group";
-        item.onclick = () => openChat(friend);
-        item.innerHTML = `
-          <div class="relative">
-            <div class="w-8 h-8 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs">
-              ${friend.username[0].toUpperCase()}
-            </div>
-            <div class="w-2.5 h-2.5 bg-green-500 rounded-full absolute -bottom-0.5 -right-0.5 border border-[#2b2d31]"></div>
-          </div>
-          <div class="truncate text-xs flex-1">
-            <div class="font-semibold text-white leading-tight truncate">${friend.username}</div>
-            <div class="text-gray-400 text-[10px] leading-tight">#${friend.tag}</div>
-          </div>
-        `;
-        container.appendChild(item);
-      });
-    }
-
-    function renderFriendsView(tab) {
-      const container = document.getElementById('friendsContainer');
-      const title = document.getElementById('friendsSectionTitle');
-      container.innerHTML = "";
-
-      if (tab === 'pending') {
-        title.innerText = `Pending Requests — ${pendingRequests.length}`;
-        if (pendingRequests.length === 0) {
-          container.innerHTML = `<div class="text-xs text-gray-500 py-4">There are no pending friend requests.</div>`;
-          return;
+        function initGrid() {
+            grid = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(null));
+            // Fill initial top 4 rows
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    grid[r][c] = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+                }
+            }
         }
-        pendingRequests.forEach(req => {
-          const div = document.createElement('div');
-          div.className = "flex items-center justify-between p-3 bg-[#2b2d31] hover:bg-[#35373c] rounded-lg border border-[#1f2023]";
-          div.innerHTML = `
-            <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 bg-purple-600 rounded-full flex items-center justify-center font-bold text-white text-xs">
-                ${req.username[0].toUpperCase()}
-              </div>
-              <div>
-                <div class="text-xs font-bold text-white">${req.username}<span class="text-gray-400 font-normal text-[11px]">#${req.tag}</span></div>
-                <div class="text-[10px] text-gray-400">${req.isIncoming ? 'Incoming Friend Request' : 'Outgoing Request Sent'}</div>
-              </div>
-            </div>
-            ${req.isIncoming ? `
-              <div class="flex items-center space-x-2">
-                <button onclick="acceptFriendRequest('${req.requestId}')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded font-semibold">Accept</button>
-                <button onclick="rejectFriendRequest('${req.requestId}')" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded font-semibold">Reject</button>
-              </div>
-            ` : `<span class="text-xs text-gray-400 font-medium">Pending</span>`}
-          `;
-          container.appendChild(div);
-        });
 
-      } else {
-        title.innerText = `All Friends — ${friendsList.length}`;
-        if (friendsList.length === 0) {
-          container.innerHTML = `<div class="text-xs text-gray-500 py-4">You have no friends on your list yet! Click 'Add Friend' to get started.</div>`;
-          return;
+        function createRandomBubble() {
+            return BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
         }
-        friendsList.forEach(friend => {
-          const div = document.createElement('div');
-          div.className = "flex items-center justify-between p-3 bg-[#2b2d31] hover:bg-[#35373c] rounded-lg border border-[#1f2023]";
-          div.innerHTML = `
-            <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 bg-[#5865F2] rounded-full flex items-center justify-center font-bold text-white text-xs">
-                ${friend.username[0].toUpperCase()}
-              </div>
-              <div>
-                <div class="text-xs font-bold text-white">${friend.username}<span class="text-gray-400 font-normal text-[11px]">#${friend.tag}</span></div>
-                <div class="text-[10px] text-green-400">Online</div>
-              </div>
-            </div>
-            <button onclick='openChat(${JSON.stringify(friend)})' class="w-8 h-8 bg-[#1e1f22] hover:bg-[#5865F2] hover:text-white rounded-full flex items-center justify-center text-gray-300 transition">
-              <i class="fa-solid fa-message text-xs"></i>
-            </button>
-          `;
-          container.appendChild(div);
-        });
-      }
 
-      const badge = document.getElementById('pendingBadge');
-      if (pendingRequests.length > 0) {
-        badge.innerText = pendingRequests.length;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    }
+        function fireBubble() {
+            if (!gameActive || firedBubble) return;
 
-    function switchTab(tab) {
-      if (tab === 'friends') {
-        document.getElementById('chatView').classList.add('hidden');
-        document.getElementById('friendsView').classList.remove('hidden');
-        document.getElementById('addFriendSection').classList.add('hidden');
-        document.getElementById('friendsListSection').classList.remove('hidden');
-        renderFriendsView('all');
-      }
-    }
+            const startX = canvas.width / 2;
+            const startY = canvas.height - 30;
+            const speed = 12;
 
-    function filterFriends(filter) {
-      document.getElementById('friendsView').classList.remove('hidden');
-      document.getElementById('chatView').classList.add('hidden');
+            firedBubble = {
+                x: startX,
+                y: startY,
+                vx: Math.cos(cannonAngle) * speed,
+                vy: -Math.sin(cannonAngle) * speed,
+                color: currentBubble
+            };
 
-      if (filter === 'add') {
-        document.getElementById('addFriendSection').classList.remove('hidden');
-        document.getElementById('friendsListSection').classList.add('hidden');
-      } else {
-        document.getElementById('addFriendSection').classList.add('hidden');
-        document.getElementById('friendsListSection').classList.remove('hidden');
-        renderFriendsView(filter);
-      }
-    }
+            currentBubble = nextBubble;
+            nextBubble = createRandomBubble();
+        }
 
-    function escapeHtml(text) {
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-  </script>
+        function scheduleRowPush() {
+            if (pushTimerId) clearTimeout(pushTimerId);
+            pushTimerId = setTimeout(() => {
+                if (!gameActive) return;
+                pushNewRow();
+                // Increase difficulty by making interval faster
+                pushInterval = Math.max(4000, pushInterval - 800);
+                speedLevel = Math.min(10, speedLevel + 1);
+                document.getElementById('speedLevelDisplay').innerText = speedLevel;
+                scheduleRowPush();
+            }, pushInterval);
+        }
+
+        function pushNewRow() {
+            // Shift all rows down
+            grid.pop();
+            const newRow = Array(GRID_COLS).fill(null).map(() => BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)]);
+            grid.unshift(newRow);
+
+            // Check if bottom row reached loss limit
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[GRID_ROWS - 1][c] !== null) {
+                    triggerGameOver();
+                    return;
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            updateFiredBubble();
+            drawGrid();
+            drawCannon();
+            drawFiredBubble();
+            drawCeilingLine();
+
+            // Periodically sync grid state with Supabase
+            if (Math.random() < 0.1) syncGridState();
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function drawGrid() {
+            const startX = 30;
+            const startY = 30;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const color = grid[r][c];
+                    if (color) {
+                        const x = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                        const y = startY + r * (BUBBLE_RADIUS * 1.73);
+                        drawBubble(x, y, color);
+                    }
+                }
+            }
+        }
+
+        function drawBubble(x, y, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, BUBBLE_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#0f172a';
+            ctx.stroke();
+
+            // Inner shine reflection
+            ctx.beginPath();
+            ctx.arc(x - BUBBLE_RADIUS * 0.3, y - BUBBLE_RADIUS * 0.3, BUBBLE_RADIUS * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fill();
+        }
+
+        function drawCannon() {
+            const cannonX = canvas.width / 2;
+            const cannonY = canvas.height - 30;
+
+            // Aim line
+            ctx.beginPath();
+            ctx.moveTo(cannonX, cannonY);
+            ctx.lineTo(cannonX + Math.cos(cannonAngle) * 60, cannonY - Math.sin(cannonAngle) * 60);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#38bdf8';
+            ctx.stroke();
+
+            // Base Shooter
+            ctx.beginPath();
+            ctx.arc(cannonX, cannonY, 25, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+            ctx.strokeStyle = '#475569';
+            ctx.stroke();
+
+            // Current & Next Bubble Ready
+            if (currentBubble) drawBubble(cannonX, cannonY, currentBubble);
+            if (nextBubble) drawBubble(cannonX - 80, cannonY, nextBubble);
+        }
+
+        function drawFiredBubble() {
+            if (firedBubble) {
+                drawBubble(firedBubble.x, firedBubble.y, firedBubble.color);
+            }
+        }
+
+        function drawCeilingLine() {
+            const dangerY = 30 + (GRID_ROWS - 1) * (BUBBLE_RADIUS * 1.73);
+            ctx.beginPath();
+            ctx.moveTo(0, dangerY);
+            ctx.lineTo(canvas.width, dangerY);
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#ef4444';
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function updateFiredBubble() {
+            if (!firedBubble) return;
+
+            firedBubble.x += firedBubble.vx;
+            firedBubble.y += firedBubble.vy;
+
+            // Bounce off walls
+            if (firedBubble.x - BUBBLE_RADIUS <= 10 || firedBubble.x + BUBBLE_RADIUS >= canvas.width - 10) {
+                firedBubble.vx *= -1;
+            }
+
+            // Check collision with top or existing grid bubbles
+            if (firedBubble.y - BUBBLE_RADIUS <= 30 || checkGridCollision()) {
+                snapToGrid();
+            }
+        }
+
+        function checkGridCollision() {
+            const startX = 30;
+            const startY = 30;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c]) {
+                        const bx = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                        const by = startY + r * (BUBBLE_RADIUS * 1.73);
+                        const dist = Math.hypot(firedBubble.x - bx, firedBubble.y - by);
+                        if (dist < BUBBLE_RADIUS * 1.8) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function snapToGrid() {
+            const startX = 30;
+            const startY = 30;
+
+            // Find closest row & col
+            let closestR = 0, closestC = 0, minDist = Infinity;
+
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const bx = startX + c * (BUBBLE_RADIUS * 2) + (r % 2 === 1 ? BUBBLE_RADIUS : 0);
+                    const by = startY + r * (BUBBLE_RADIUS * 1.73);
+                    const dist = Math.hypot(firedBubble.x - bx, firedBubble.y - by);
+                    if (dist < minDist && grid[r][c] === null) {
+                        minDist = dist;
+                        closestR = r;
+                        closestC = c;
+                    }
+                }
+            }
+
+            grid[closestR][closestC] = firedBubble.color;
+            firedBubble = null;
+
+            // Pop matching clusters
+            popMatches(closestR, closestC);
+
+            // Check game over
+            if (closestR >= GRID_ROWS - 1) {
+                triggerGameOver();
+            }
+        }
+
+        function popMatches(r, c) {
+            const targetColor = grid[r][c];
+            const matches = [];
+            const visited = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(false));
+
+            function findNeighbors(row, col) {
+                if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return;
+                if (visited[row][col] || grid[row][col] !== targetColor) return;
+
+                visited[row][col] = true;
+                matches.push({ r: row, c: col });
+
+                const offset = row % 2 === 1 ? 1 : 0;
+                const neighbors = [
+                    [row - 1, col - 1 + offset], [row - 1, col + offset],
+                    [row, col - 1],             [row, col + 1],
+                    [row + 1, col - 1 + offset], [row + 1, col + offset]
+                ];
+
+                neighbors.forEach(([nr, nc]) => findNeighbors(nr, nc));
+            }
+
+            findNeighbors(r, c);
+
+            if (matches.length >= 3) {
+                matches.forEach(m => { grid[m.r][m.c] = null; });
+                playerScore += matches.length * 100;
+                document.getElementById('myScoreDisplay').innerText = playerScore;
+
+                dropHangingBubbles();
+            }
+        }
+
+        function dropHangingBubbles() {
+            const connected = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(false));
+
+            function markConnected(row, col) {
+                if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return;
+                if (connected[row][col] || grid[row][col] === null) return;
+
+                connected[row][col] = true;
+
+                const offset = row % 2 === 1 ? 1 : 0;
+                const neighbors = [
+                    [row - 1, col - 1 + offset], [row - 1, col + offset],
+                    [row, col - 1],             [row, col + 1],
+                    [row + 1, col - 1 + offset], [row + 1, col + offset]
+                ];
+
+                neighbors.forEach(([nr, nc]) => markConnected(nr, nc));
+            }
+
+            // Mark all attached to top row
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[0][c]) markConnected(0, c);
+            }
+
+            // Remove unattached hanging bubbles
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    if (grid[r][c] && !connected[r][c]) {
+                        grid[r][c] = null;
+                        playerScore += 150;
+                    }
+                }
+            }
+            document.getElementById('myScoreDisplay').innerText = playerScore;
+        }
+
+        async function syncGridState() {
+            if (!currentRoomCode) return;
+            await supabaseClient.from('players').update({
+                grid_state: grid,
+                score: playerScore
+            }).eq('id', playerId);
+        }
+
+        async function triggerGameOver() {
+            gameActive = false;
+            if (pushTimerId) clearTimeout(pushTimerId);
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+
+            await supabaseClient.from('players').update({ status: 'eliminated' }).eq('id', playerId);
+        }
+
+        function returnToLobby() {
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            gameActive = false;
+            switchView('roomLobbyScreen');
+        }
+    </script>
 </body>
 </html>
