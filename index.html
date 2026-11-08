@@ -20,31 +20,31 @@
         
         /* Arcade Glassmorphism & Neon Glows */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
+            background: rgba(15, 23, 42, 0.9);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
         
         .neon-box {
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25), inset 0 0 15px rgba(0,0,0,0.6);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.3), inset 0 0 15px rgba(0,0,0,0.7);
         }
 
         .arcade-btn {
             transition: all 0.1s ease;
-            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5), 0 0 10px rgba(56, 189, 248, 0.2);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
         }
         .arcade-btn:active {
             transform: translateY(3px);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
         }
 
         /* Canvas Screen Shake */
         @keyframes shake {
             0% { transform: translate(0, 0); }
-            20% { transform: translate(-4px, 4px); }
-            40% { transform: translate(4px, -4px); }
-            60% { transform: translate(-4px, -2px); }
-            80% { transform: translate(4px, 2px); }
+            20% { transform: translate(-5px, 5px); }
+            40% { transform: translate(5px, -5px); }
+            60% { transform: translate(-5px, -2px); }
+            80% { transform: translate(5px, 2px); }
             100% { transform: translate(0, 0); }
         }
         .animate-shake {
@@ -67,7 +67,7 @@
                     <i class="fa-solid fa-circle-dot text-pink-400 text-lg"></i>
                 </div>
                 <h1 class="font-arcade text-base sm:text-xl bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-400 bg-clip-text text-transparent">
-                    BUBBLE 4P
+                    BUBBLE 4P ARENA
                 </h1>
             </div>
             
@@ -105,7 +105,7 @@
                     MULTIPLAYER BATTLE ARENA
                 </div>
                 <h2 class="font-bubble text-3xl sm:text-4xl text-cyan-400 tracking-wide">Puzzle Bobble</h2>
-                <p class="text-xs text-slate-400 mt-1">Join up to 4 players in a real-time survival match!</p>
+                <p class="text-xs text-slate-400 mt-1">Join up to 4 players in real-time survival!</p>
             </div>
 
             <!-- Nickname Input -->
@@ -165,11 +165,16 @@
                     <div id="playerList" class="grid grid-cols-1 gap-2.5 mb-4"></div>
                 </div>
 
-                <!-- Host Controls -->
-                <div class="pt-2">
-                    <button id="startGameBtn" onclick="requestStartGame()" class="hidden arcade-btn w-full bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-arcade text-xs py-4 rounded-xl text-center">
-                        <i class="fa-solid fa-play mr-1"></i> START MATCH NOW
-                    </button>
+                <!-- Host Controls & Bot Adders -->
+                <div class="pt-2 space-y-2">
+                    <div id="hostOptionsBtn" class="hidden flex gap-2">
+                        <button onclick="addBotPlayer()" class="arcade-btn w-1/2 bg-purple-700 hover:bg-purple-600 text-white font-arcade text-[10px] py-2.5 rounded-xl text-center">
+                            <i class="fa-solid fa-robot mr-1"></i> ADD AI BOT
+                        </button>
+                        <button onclick="requestStartGame()" class="arcade-btn w-1/2 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-arcade text-[10px] py-2.5 rounded-xl text-center">
+                            <i class="fa-solid fa-play mr-1"></i> START MATCH
+                        </button>
+                    </div>
                     <p id="waitingHostMsg" class="text-xs text-center text-slate-400 font-semibold animate-pulse py-3 bg-slate-950/60 rounded-xl border border-slate-800">
                         Waiting for host to start match...
                     </p>
@@ -205,7 +210,7 @@
         </div>
 
         <!-- 3. ARENA GAMEPLAY SCREEN -->
-        <div id="gameScreen" class="hidden w-full max-w-6xl flex flex-col items-center">
+        <div id="gameScreen" class="hidden w-full max-w-7xl flex flex-col items-center">
             
             <!-- Countdown Overlay -->
             <div id="countdownOverlay" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[90] flex flex-col items-center justify-center">
@@ -213,13 +218,13 @@
                 <span id="countdownText" class="font-arcade text-7xl sm:text-9xl text-pink-500 animate-bounce">3</span>
             </div>
 
-            <div class="w-full grid grid-cols-1 lg:grid-cols-4 gap-3 items-start">
+            <div class="w-full flex flex-col lg:flex-row gap-4 items-start">
                 
-                <!-- Main Player Canvas Frame (Cols 1-3) -->
-                <div class="lg:col-span-3 flex flex-col items-center w-full">
+                <!-- Main Player Canvas Frame -->
+                <div class="flex flex-col items-center w-full lg:w-1/2">
                     
                     <!-- HUD Status Bar -->
-                    <div class="w-full max-w-[360px] sm:max-w-[400px] bg-slate-900 border border-slate-800 rounded-t-xl p-2.5 flex justify-between items-center text-[10px] sm:text-xs font-arcade">
+                    <div class="w-full max-w-[380px] bg-slate-900 border border-slate-800 rounded-t-xl p-2.5 flex justify-between items-center text-[10px] sm:text-xs font-arcade">
                         <div class="truncate max-w-[110px]">
                             <span class="text-cyan-400">YOU:</span> <span id="myNickDisplay" class="text-white">Player</span>
                         </div>
@@ -232,7 +237,7 @@
                     </div>
 
                     <!-- Main Canvas Box -->
-                    <div id="canvasWrapper" class="relative w-full max-w-[360px] sm:max-w-[400px] bg-slate-950 border-x-4 border-b-4 border-slate-800 rounded-b-xl overflow-hidden shadow-2xl flex justify-center">
+                    <div id="canvasWrapper" class="relative w-full max-w-[380px] bg-slate-950 border-x-4 border-b-4 border-slate-800 rounded-b-xl overflow-hidden shadow-2xl flex justify-center">
                         <canvas id="gameCanvas" width="360" height="520" class="block cursor-crosshair touch-none"></canvas>
 
                         <!-- Game Over / Elimination Overlay -->
@@ -246,7 +251,7 @@
                     </div>
 
                     <!-- MOBILE ON-SCREEN TOUCH CONTROLS -->
-                    <div class="w-full max-w-[360px] sm:max-w-[400px] grid grid-cols-4 gap-2 mt-2">
+                    <div class="w-full max-w-[380px] grid grid-cols-4 gap-2 mt-2">
                         <button id="btnAimLeft" class="arcade-btn bg-slate-800 hover:bg-slate-700 active:bg-cyan-600 text-white py-3 rounded-xl flex items-center justify-center text-lg font-bold border border-slate-700">
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
@@ -263,21 +268,21 @@
 
                 </div>
 
-                <!-- Opponents Miniatures & Arena Chat (Col 4) -->
-                <div class="w-full flex flex-col gap-3">
+                <!-- Expanded Desktop Enemies & Battle Chat -->
+                <div class="w-full lg:w-1/2 flex flex-col gap-3">
                     
-                    <!-- 3 Opponents Miniature Preview Canvases -->
+                    <!-- Expanded Opponents Miniature Preview Canvases -->
                     <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
                         <h3 class="font-arcade text-[10px] text-yellow-400 mb-2 flex items-center gap-1.5">
-                            <i class="fa-solid fa-users"></i> LIVE OPPONENTS
+                            <i class="fa-solid fa-users"></i> LIVE OPPONENTS ARENA
                         </h3>
-                        <div id="opponentsContainer" class="grid grid-cols-3 lg:grid-cols-1 gap-2">
-                            <!-- Dynamic miniature canvases generated here -->
+                        <div id="opponentsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <!-- High resolution PC miniature canvases rendered here -->
                         </div>
                     </div>
 
                     <!-- Live In-Game Chat Overlay -->
-                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col h-48 lg:h-60">
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex flex-col h-48 lg:h-56">
                         <h4 class="font-arcade text-[10px] text-cyan-400 mb-1.5">BATTLE TAUNTS</h4>
                         <div id="inGameChatBox" class="flex-grow overflow-y-auto space-y-1 text-xs text-slate-300 mb-2 pr-1"></div>
                         
@@ -330,6 +335,7 @@
         // Player State Tracker
         let roomPlayers = [];
         let inGame = false;
+        let botLoopIntervals = {};
 
         // ==========================================
         // 2. RETRO SOUND SYNTHESIZER (WEB AUDIO API)
@@ -461,7 +467,7 @@
             currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
             isHost = true;
 
-            roomPlayers = [{ id: playerId, nickname: myNickname, isHost: true, status: 'alive', score: 0, grid: [] }];
+            roomPlayers = [{ id: playerId, nickname: myNickname, isHost: true, isBot: false, status: 'alive', score: 0, grid: [] }];
 
             initRoomChannel();
             enterRoomLobbyUI();
@@ -498,6 +504,42 @@
                     });
                 }
             }, 500);
+        }
+
+        function addBotPlayer() {
+            if (!isHost || roomPlayers.length >= 4) return;
+            const botId = 'bot_' + Math.random().toString(36).substring(2, 7);
+            const botNames = ['BusterBot', 'BubbleAI', 'RoboBuster', 'CyberBuster'];
+            const botName = botNames[roomPlayers.length % botNames.length];
+
+            roomPlayers.push({
+                id: botId,
+                nickname: botName,
+                isHost: false,
+                isBot: true,
+                status: 'alive',
+                score: 0,
+                grid: []
+            });
+
+            syncPlayerListToRoom();
+            updateLobbyPlayerUI();
+        }
+
+        function kickPlayer(targetId) {
+            if (!isHost) return;
+            roomPlayers = roomPlayers.filter(p => p.id !== targetId);
+            
+            if (roomChannel) {
+                roomChannel.send({
+                    type: 'broadcast',
+                    event: 'KICK_PLAYER',
+                    payload: { targetId: targetId }
+                });
+            }
+
+            syncPlayerListToRoom();
+            updateLobbyPlayerUI();
         }
 
         function enterRoomLobbyUI() {
@@ -542,17 +584,13 @@
                                 id: payload.id,
                                 nickname: payload.nickname,
                                 isHost: false,
+                                isBot: false,
                                 status: 'alive',
                                 score: 0,
                                 grid: []
                             });
                             syncPlayerListToRoom();
                             updateLobbyPlayerUI();
-
-                            // Auto start match if room reaches 4 players
-                            if (roomPlayers.length === 4 && !inGame) {
-                                requestStartGame();
-                            }
                         }
                     }
                 })
@@ -566,6 +604,13 @@
                 // Signal to start countdown
                 .on('broadcast', { event: 'START_GAME' }, () => {
                     triggerStartCountdown();
+                })
+                // Kick event listener
+                .on('broadcast', { event: 'KICK_PLAYER' }, ({ payload }) => {
+                    if (payload.targetId === playerId) {
+                        leaveRoom();
+                        showModal("Kicked", "You were kicked from the room by the host.");
+                    }
                 })
                 // Chat message receiver
                 .on('broadcast', { event: 'CHAT_MSG' }, ({ payload }) => {
@@ -606,7 +651,7 @@
         function updateLobbyPlayerUI() {
             const playerList = document.getElementById('playerList');
             const playerCount = document.getElementById('playerCount');
-            const startBtn = document.getElementById('startGameBtn');
+            const hostOptionsBtn = document.getElementById('hostOptionsBtn');
             const waitingMsg = document.getElementById('waitingHostMsg');
 
             playerCount.innerText = `${roomPlayers.length}/4`;
@@ -617,24 +662,27 @@
                 card.className = "bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between";
                 card.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
-                            <i class="fa-solid fa-user"></i>
+                        <div class="w-8 h-8 rounded-full ${p.isBot ? 'bg-purple-500/20 text-purple-400' : 'bg-cyan-500/20 text-cyan-400'} flex items-center justify-center font-bold">
+                            <i class="${p.isBot ? 'fa-solid fa-robot' : 'fa-solid fa-user'}"></i>
                         </div>
                         <div>
                             <p class="font-bold text-xs text-white">${p.nickname} ${p.id === playerId ? '<span class="text-[10px] text-yellow-400">(You)</span>' : ''}</p>
-                            ${p.isHost ? '<span class="text-[9px] font-arcade text-pink-400">HOST</span>' : '<span class="text-[9px] text-slate-500">READY</span>'}
+                            ${p.isHost ? '<span class="text-[9px] font-arcade text-pink-400">HOST</span>' : (p.isBot ? '<span class="text-[9px] text-purple-400">AI BOT</span>' : '<span class="text-[9px] text-slate-500">READY</span>')}
                         </div>
                     </div>
-                    <span class="w-2.5 h-2.5 rounded-full ${p.status === 'alive' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                    <div class="flex items-center gap-2">
+                        ${isHost && p.id !== playerId ? `<button onclick="kickPlayer('${p.id}')" class="text-[10px] bg-red-900/40 border border-red-700/60 text-red-300 px-2 py-0.5 rounded font-arcade hover:bg-red-800">KICK</button>` : ''}
+                        <span class="w-2.5 h-2.5 rounded-full ${p.status === 'alive' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                    </div>
                 `;
                 playerList.appendChild(card);
             });
 
             if (isHost) {
-                startBtn.classList.remove('hidden');
+                hostOptionsBtn.classList.remove('hidden');
                 waitingMsg.classList.add('hidden');
             } else {
-                startBtn.classList.add('hidden');
+                hostOptionsBtn.classList.add('hidden');
                 waitingMsg.classList.remove('hidden');
             }
         }
@@ -712,8 +760,39 @@
                     clearInterval(interval);
                     document.getElementById('countdownOverlay').classList.add('hidden');
                     startBubbleGameEngine();
+                    if (isHost) startAIBotSimulations();
                 }
             }, 1000);
+        }
+
+        function startAIBotSimulations() {
+            const bots = roomPlayers.filter(p => p.isBot);
+            bots.forEach(bot => {
+                let botGrid = Array(GRID_ROWS).fill(null).map(() => Array(GRID_COLS).fill(null));
+                for (let r = 0; r < 4; r++) {
+                    for (let c = 0; c < GRID_COLS; c++) {
+                        botGrid[r][c] = BUBBLE_COLORS[Math.floor(Math.random() * BUBBLE_COLORS.length)];
+                    }
+                }
+                let botScore = 0;
+                
+                botLoopIntervals[bot.id] = setInterval(() => {
+                    if (!gameActive) {
+                        clearInterval(botLoopIntervals[bot.id]);
+                        return;
+                    }
+                    botScore += Math.floor(Math.random() * 3) * 100;
+                    
+                    if (roomChannel) {
+                        roomChannel.send({
+                            type: 'broadcast',
+                            event: 'GAME_STATE_UPDATE',
+                            payload: { id: bot.id, grid: botGrid, score: botScore, status: 'alive' }
+                        });
+                    }
+                    updateOpponentPreview(bot.id, botGrid, botScore, 'alive');
+                }, 2000);
+            });
         }
 
         function setupOpponentsContainer() {
@@ -723,13 +802,13 @@
             const opponents = roomPlayers.filter(p => p.id !== playerId);
             opponents.forEach(op => {
                 const box = document.createElement('div');
-                box.className = "bg-slate-950 border border-slate-800 rounded-lg p-1.5 flex flex-col items-center";
+                box.className = "bg-slate-950 border border-slate-800 rounded-lg p-2 flex flex-col items-center w-full";
                 box.innerHTML = `
-                    <div class="flex justify-between w-full text-[9px] font-arcade mb-1">
-                        <span class="text-cyan-400 truncate max-w-[65px]">${op.nickname}</span>
+                    <div class="flex justify-between w-full text-[10px] font-arcade mb-1">
+                        <span class="text-cyan-400 truncate max-w-[80px]">${op.nickname}</span>
                         <span id="oppScore_${op.id}" class="text-yellow-400">0</span>
                     </div>
-                    <canvas id="oppCanvas_${op.id}" width="120" height="160" class="bg-slate-900 border border-slate-800 rounded block"></canvas>
+                    <canvas id="oppCanvas_${op.id}" width="160" height="210" class="bg-slate-900 border border-slate-800 rounded block w-full"></canvas>
                 `;
                 container.appendChild(box);
             });
@@ -762,7 +841,7 @@
         const GRID_ROWS = 12;
         const GRID_COLS = 8;
         const BUBBLE_RADIUS = 19;
-        const BUBBLE_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#ec4899'];
+        const BUBBLE_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 
         let grid = [];
         let cannonAngle = Math.PI / 2;
@@ -780,20 +859,22 @@
             canvas = document.getElementById('gameCanvas');
             ctx = canvas.getContext('2d');
             
-            // Mouse Aiming & Touch Canvas Gestures
-            canvas.onmousemove = (e) => handleAiming(e.clientX, e.clientY);
-            canvas.ontouchmove = (e) => {
-                if (e.touches.length > 0) {
-                    handleAiming(e.touches[0].clientX, e.touches[0].clientY);
-                }
+            // WINDOW GLOBAL AIMING CONTROLS (OUTSIDE CANVAS SUPPORT)
+            window.onmousemove = (e) => {
+                if (!gameActive) return;
+                handleAiming(e.clientX, e.clientY);
             };
+            window.ontouchmove = (e) => {
+                if (!gameActive || e.touches.length === 0) return;
+                handleAiming(e.touches[0].clientX, e.touches[0].clientY);
+            };
+
             canvas.onclick = fireBubble;
             canvas.ontouchend = (e) => {
                 e.preventDefault();
                 fireBubble();
             };
 
-            // Setup Mobile Buttons Aim Listeners
             setupTouchAimButtons();
 
             // Keyboard Controls
@@ -826,12 +907,13 @@
         }
 
         function handleAiming(clientX, clientY) {
+            if (!canvas) return;
             const rect = canvas.getBoundingClientRect();
-            const mouseX = clientY ? (clientX - rect.left) : clientX;
-            const mouseY = clientY ? (clientY - rect.top) : clientY;
+            const mouseX = clientX - rect.left;
+            const mouseY = clientY - rect.top;
             const dx = mouseX - (canvas.width / 2);
             const dy = (canvas.height - 35) - mouseY;
-            if (dy > 10) cannonAngle = Math.atan2(dy, dx);
+            if (dy > 5) cannonAngle = Math.atan2(dy, dx);
         }
 
         function setupTouchAimButtons() {
@@ -913,9 +995,13 @@
             }, dropIntervalMs);
         }
 
+        // ACCURATE STAGGERED ROW PUSH (PRESERVES COLORS & INDEXING)
         function pushNewRow() {
-            grid.pop();
+            // Create brand new row of bubbles
             const newRow = Array(GRID_COLS).fill(null).map(() => BUBBLE_COLORS[Math.floor(Math.random() * 5)]);
+            
+            // Shift grid down
+            grid.pop();
             grid.unshift(newRow);
 
             triggerScreenShake();
@@ -970,13 +1056,13 @@
             let vx = Math.cos(cannonAngle) * 10;
             let vy = -Math.sin(cannonAngle) * 10;
 
-            for (let i = 0; i < 25; i++) {
+            for (let i = 0; i < 30; i++) {
                 currX += vx;
                 currY += vy;
 
                 if (currX <= 15 || currX >= canvas.width - 15) vx *= -1;
 
-                ctx.fillStyle = i % 2 === 0 ? 'rgba(56, 189, 248, 0.6)' : 'rgba(255, 255, 255, 0.2)';
+                ctx.fillStyle = i % 2 === 0 ? 'rgba(56, 189, 248, 0.8)' : 'rgba(255, 255, 255, 0.3)';
                 ctx.beginPath();
                 ctx.arc(currX, currY, 2.5, 0, Math.PI * 2);
                 ctx.fill();
@@ -1000,17 +1086,25 @@
         }
 
         function drawGlossyBubble(targetCtx, x, y, r, color) {
+            targetCtx.save();
+            // Outer shadow ring
+            targetCtx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            targetCtx.shadowBlur = 4;
+            targetCtx.shadowOffsetY = 2;
+
             // Main sphere
             targetCtx.beginPath();
             targetCtx.arc(x, y, r, 0, Math.PI * 2);
             targetCtx.fillStyle = color;
             targetCtx.fill();
+            targetCtx.restore();
 
-            // Radial gloss shadow
-            const gradient = targetCtx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
-            gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.15)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
+            // Radial gloss shine overlay
+            const gradient = targetCtx.createRadialGradient(x - r*0.35, y - r*0.35, r*0.05, x, y, r);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+            gradient.addColorStop(0.35, 'rgba(255, 255, 255, 0.2)');
+            gradient.addColorStop(0.85, 'rgba(0, 0, 0, 0.25)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
             
             targetCtx.beginPath();
             targetCtx.arc(x, y, r, 0, Math.PI * 2);
@@ -1028,8 +1122,8 @@
             // Pointer Arrow Line
             ctx.beginPath();
             ctx.moveTo(cannonX, cannonY);
-            ctx.lineTo(cannonX + Math.cos(cannonAngle) * 50, cannonY - Math.sin(cannonAngle) * 50);
-            ctx.lineWidth = 5;
+            ctx.lineTo(cannonX + Math.cos(cannonAngle) * 55, cannonY - Math.sin(cannonAngle) * 55);
+            ctx.lineWidth = 6;
             ctx.strokeStyle = '#38bdf8';
             ctx.stroke();
 
@@ -1215,18 +1309,18 @@
                 const dropScore = droppedCount * 200;
                 playerScore += dropScore;
                 document.getElementById('myScoreDisplay').innerText = playerScore;
-                spawnFloatingText(`COMBO +${dropScore}!`, canvas.width / 2, 140, '#ec4899');
+                spawnFloatingText(`DROP COMBO +${dropScore}!`, canvas.width / 2, 140, '#ec4899');
             }
         }
 
         function spawnParticles(x, y, color) {
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 10; i++) {
                 particles.push({
                     x: x,
                     y: y,
-                    vx: (Math.random() - 0.5) * 6,
-                    vy: (Math.random() - 0.5) * 6,
-                    radius: 3 + Math.random() * 3,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    radius: 3 + Math.random() * 4,
                     color: color,
                     alpha: 1
                 });
@@ -1273,7 +1367,7 @@
 
                 ctx.save();
                 ctx.globalAlpha = ft.alpha;
-                ctx.font = 'bold 16px "Press Start 2P"';
+                ctx.font = 'bold 14px "Press Start 2P"';
                 ctx.fillStyle = ft.color;
                 ctx.textAlign = 'center';
                 ctx.fillText(ft.text, ft.x, ft.y);
@@ -1291,9 +1385,9 @@
             const oCtx = oppCanvas.getContext('2d');
             oCtx.clearRect(0, 0, oppCanvas.width, oppCanvas.height);
 
-            const miniRadius = 6;
-            const startX = 8;
-            const startY = 8;
+            const miniRadius = 8;
+            const startX = 12;
+            const startY = 12;
 
             if (oppGrid && oppGrid.length) {
                 for (let r = 0; r < oppGrid.length; r++) {
@@ -1309,10 +1403,10 @@
             }
 
             if (oppStatus === 'eliminated') {
-                oCtx.fillStyle = 'rgba(239, 68, 68, 0.75)';
+                oCtx.fillStyle = 'rgba(239, 68, 68, 0.8)';
                 oCtx.fillRect(0, 0, oppCanvas.width, oppCanvas.height);
                 oCtx.fillStyle = '#ffffff';
-                oCtx.font = '8px "Press Start 2P"';
+                oCtx.font = '10px "Press Start 2P"';
                 oCtx.textAlign = 'center';
                 oCtx.fillText('OUT', oppCanvas.width / 2, oppCanvas.height / 2);
             }
@@ -1344,6 +1438,10 @@
             document.getElementById('gameOverOverlay').classList.add('hidden');
             gameActive = false;
             inGame = false;
+            
+            Object.keys(botLoopIntervals).forEach(id => clearInterval(botLoopIntervals[id]));
+            botLoopIntervals = {};
+
             switchView('roomLobbyScreen');
         }
     </script>
